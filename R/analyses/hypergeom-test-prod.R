@@ -80,7 +80,7 @@ final <- as_tibble(cbind(q, p.value))
 final <- final %>%
   mutate(p.adjust = p.adjust(p.value, method = 'fdr'))
 # write out csv of guide-gene associated p.vals
-write_csv(final, sprintf('../../out/%s/KO_sigpos_p-vals.csv', out.dir) )
+write_csv(final, sprintf('%s/KO_sigpos_p-vals.csv', out.dir) )
 
 # take filter set
 final.filt <- final %>%
@@ -112,12 +112,12 @@ not_shared_feats <- function(hypergeom.analysis, feat) {
 # which genes are not shared between clusters?
 uq.ge <- not_shared_feats(final.filt, "gene")
 # write out
-write_csv(uq.ge, sprintf('../../out/%s/KO_sigpos_uq-gene.csv', out.dir))
+write_csv(uq.ge, sprintf('%s/KO_sigpos_uq-gene.csv', out.dir))
 
 # which guides are not shared between clusters?
 uq.cl <- not_shared_feats(final.filt, "guide")
 # write out
-write_csv(uq.cl, sprintf('../../out/%s/KO_sigpos_uq-guide.csv', out.dir))
+write_csv(uq.cl, sprintf('%s/KO_sigpos_uq-guide.csv', out.dir))
 
 # compared to total # of guides each cluster:
 no.uq.guides <- uq.cl %>%
@@ -148,5 +148,5 @@ ggplot(clust_guide) +
   labs(x = "Guide", y = "No. Genes") +
   coord_flip() +
   facet_wrap(vars(louvain), nrow = 1) +
-  ggsave(sprintf('../../out/%s/KO_sigpos_freq.png', out.dir), width = 30, height = 20, units = 'in')
+  ggsave(sprintf('%s/KO_sigpos_freq.png', out.dir), width = 30, height = 20, units = 'in')
 
