@@ -82,7 +82,7 @@ final.filt <- final %>%
 
 # which genes are not shared between clusters?
 uq.ge <- list()
-for(i in unique(final.filt$louvain)) {
+for(i in sort(unique(final.filt$louvain)) ) {
     not.clust.ge <- final.filt %>%
       filter(louvain != i) %>%
       select(gene) %>%
@@ -90,6 +90,7 @@ for(i in unique(final.filt$louvain)) {
     clust.uq.ge <- final.filt %>%
       filter(louvain == i) %>%
       select(gene) %>%
+      distinct() %>%
       anti_join(not.clust.ge)
     colnames(clust.uq.ge) <- sprintf('cluster_%i', i)
     uq.ge <<- append(uq.ge, clust.uq.ge)
@@ -97,7 +98,7 @@ for(i in unique(final.filt$louvain)) {
 
 # which guides are not shared between clusters?
 uq.cl <- list()
-for(i in unique(final.filt$louvain)) {
+for(i in sort(unique(final.filt$louvain)) ) {
   not.clust.guide <- final.filt %>%
     filter(louvain != i) %>%
     select(guide) %>%
@@ -105,6 +106,7 @@ for(i in unique(final.filt$louvain)) {
   clust.uq.guide <- final.filt %>%
     filter(louvain == i) %>%
     select(guide) %>%
+    distinct() %>%
     anti_join(not.clust.guide)
   colnames(clust.uq.guide) <- sprintf('cluster_%i', i)
   uq.cl <<- append(uq.cl, clust.uq.guide)
@@ -115,7 +117,8 @@ no.unique.guides <- lapply(uq.cl, function(cluster){
 })
 final.filt %>%
   count(louvain) %>%
-  mutate(diff = nn - unlist(no.unique.guides))
+  mutate(diff = nn - unlist(no.unique.guides)) %>%
+  print()
 
 # NEXT
 # visualize most important combos in each cluster
