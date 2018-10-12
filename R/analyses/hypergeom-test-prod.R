@@ -80,37 +80,35 @@ final.filt <- final %>%
   mutate(p.adjust = p.adjust(p.value, method = 'fdr')) %>%
   filter(p.adjust <= 0.01)
 
-# which genes are not shared between clusters?
-uq.ge <- list()
-for(i in sort(unique(final.filt$louvain)) ) {
-    not.clust.ge <- final.filt %>%
+# function
+# to extract features unique to each cluster
+# as compared to all other clusters
+not_shared_feats <- function(hypergeom.analysis, feat) {
+  uq.feat <- list()
+  for( i in sort(unique(hypergeom.analysis$louvain))) {
+    not.clust.feat <- hypergeom.analysis %>%
       filter(louvain != i) %>%
-      select(gene) %>%
+      select(feat) %>%
       distinct()
-    clust.uq.ge <- final.filt %>%
+    clust.uq.feat <- hypergeom.analysis %>%
       filter(louvain == i) %>%
-      select(gene) %>%
+      select(feat) %>%
       distinct() %>%
-      anti_join(not.clust.ge)
-    colnames(clust.uq.ge) <- sprintf('cluster_%i', i)
-    uq.ge <<- append(uq.ge, clust.uq.ge)
+      anti_join(not.clust.feat)
+    colnames(clust.uq.feat) <- sprintf('cluster_%i', i)
+    uq.feat <- append(uq.feat, clust.uq.feat)
+  }
+  # corece to dataframe
+  lapply(uq.feat,`length<-`, max(lengths(uq.feat))) %>%
+    as.data.frame()
 }
 
+# which genes are not shared between clusters?
+uq.ge <- not_shared_feats(final.filt, "gene")
+
 # which guides are not shared between clusters?
-uq.cl <- list()
-for(i in sort(unique(final.filt$louvain)) ) {
-  not.clust.guide <- final.filt %>%
-    filter(louvain != i) %>%
-    select(guide) %>%
-    distinct()
-  clust.uq.guide <- final.filt %>%
-    filter(louvain == i) %>%
-    select(guide) %>%
-    distinct() %>%
-    anti_join(not.clust.guide)
-  colnames(clust.uq.guide) <- sprintf('cluster_%i', i)
-  uq.cl <<- append(uq.cl, clust.uq.guide)
-}
+uq.cl <- not_shared_feats(final.filt, "guide")
+
 # compared to total # of guides each cluster:
 no.unique.guides <- lapply(uq.cl, function(cluster){
   length(cluster)
