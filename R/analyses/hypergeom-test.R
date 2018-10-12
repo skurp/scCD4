@@ -114,8 +114,42 @@ final.filt %>%
 # write out csv of guide-gene associated p.vals
 # run entire population on cluster (prod scripts)
 
+# visualize no. genes associate w/ each guide in each cluster
+print(paste("Number of distinct genes associate with all guides:",
+            n_distinct(guide_data$gene)) ) # for reference
+# why is this one guide missing??
+cell_meta$guide_cov[which(!(unique(cell_meta$guide_cov) %in% unique(guide_data$guide)))]
+
+clust_guide <- final.filt %>%
+  count(louvain, guide)
+ggplot(clust_guides) +
+  geom_bar(aes(x = guide, y = nn), stat = 'identity') +
+  facet_wrap(vars(louvain))
 
 
+
+clusters <- final.filt %>%
+  split(.$louvain) %>%
+  lapply(., function(clust){
+    clust <- clust[clust$guide_cov %in% unique(guide_pos$guide), ]
+    clust <- clust %>%
+      count(guide_cov) %>%
+      arrange(desc(n))
+    clust %>%
+      .[1:50,] %>%
+      mutate(guide_cov = fct_inorder(guide_cov))
+  })
+# plot
+for(i in 1:9){
+  clust.num <- i-1
+  ggplot(clusters[[i]]) +
+    geom_bar(aes(y = n, x = guide_cov), stat = 'identity') +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ggtitle(sprintf("Sig-Pos KO Guide Freq Cluster %i", clust.num)) +
+    labs(x = "Guide", y = "Freq") +
+    coord_flip() +
+    ggsave(sprintf('KO_sigpos_freq-%i.png', clust.num), width = 10, height = 20, units = 'in')
+}
 
 
 
