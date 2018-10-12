@@ -1,12 +1,20 @@
 # Will Connell
 # 2018.10.11
 
+# Depends -----------------------------------------------------------------
 library(readr)
 library(dplyr)
 library(purrr)
 library(forcats)
 library(ggplot2)
 
+# Prepare output paths ----------------------------------------------------
+start.date <- Sys.Date()
+out.dir <- sprintf("../out/%s_hypergeom-test", start.date)
+dir.create(out.dir)
+
+
+# Input data --------------------------------------------------------------
 # all cell-guide - cluster
 path_cell_meta <- "~/ye/projects/scanpy/KO_cells.csv"
 cell_meta <- read_csv(path_cell_meta) %>% sample_frac(1)
