@@ -92,6 +92,17 @@ final$p.adjust_all <- p.adjust(final$p.value, method = 'fdr')
 # write out csv of guide-gene associated p.vals
 write_csv(final, sprintf('%s/KO_sigpos_p-vals.csv', out.dir) )
 
+# Q-Q plot of p-values
+png(sprintf("%s/qq-test.png", out.dir), width = 8, height = 9, units = 'in', res = 200)
+plot( x = -log10(ppoints(length(final$p.value))),
+      y = -log10(sort(final$p.value)),
+      xlab= "Expected (-log10)",
+      ylab="Observed (-log10)" )
+abline(0,1,lty=45)
+dev.off()
+
+# to do: power analysis
+
 # take filter set
 final.filt <- final %>%
   filter(p.adjust2 <= 0.01)
