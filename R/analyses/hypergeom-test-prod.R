@@ -76,8 +76,13 @@ for(cluster in sort(unique(cell_meta$louvain)) ){
 }
 
 final <- as_tibble(cbind(q, p.value))
+final <- final %>%
+  mutate(p.adjust = p.adjust(p.value, method = 'fdr'))
+# write out csv of guide-gene associated p.vals
+write_csv(final, sprintf('../../out/%s/KO_sigpos_p-vals.csv', out.dir) )
+
+# take filter set
 final.filt <- final %>%
-  mutate(p.adjust = p.adjust(p.value, method = 'fdr')) %>%
   filter(p.adjust <= 0.01)
 
 # function
@@ -105,9 +110,13 @@ not_shared_feats <- function(hypergeom.analysis, feat) {
 
 # which genes are not shared between clusters?
 uq.ge <- not_shared_feats(final.filt, "gene")
+# write out
+write_csv(uq.ge, sprintf('../../out/%s/KO_sigpos_uq-gene.csv', out.dir))
 
 # which guides are not shared between clusters?
 uq.cl <- not_shared_feats(final.filt, "guide")
+# write out
+write_csv(uq.cl, sprintf('../../out/%s/KO_sigpos_uq-guide.csv', out.dir))
 
 # compared to total # of guides each cluster:
 no.uq.guides <- uq.cl %>%
@@ -122,11 +131,6 @@ final.filt %>%
   mutate(diff = nn - (no.uq.guides$n)) %>%
   cbind(., no.uq.guides$louvain) %>%
   print()
-
-# NEXT
-# visualize most important combos in each cluster
-# write out csv of guide-gene associated p.vals
-# run entire population on cluster (prod scripts)
 
 # visualize no. genes associate w/ each guide in each cluster
 print(paste("Number of distinct genes associate with all guides:",
