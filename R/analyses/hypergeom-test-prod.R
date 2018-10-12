@@ -147,5 +147,5 @@ ggplot(clust_guide) +
   labs(x = "Guide", y = "No. Genes") +
   coord_flip() +
   facet_wrap(vars(louvain), nrow = 1) +
-  ggsave(sprintf('../../out/%s/KO_sigpos_freq.png', out.dir), width = 20, height = 10, units = 'in')
+  ggsave(sprintf('../../out/%s/KO_sigpos_freq.png', out.dir), width = 30, height = 20, units = 'in')
 
