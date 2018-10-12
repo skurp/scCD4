@@ -119,25 +119,22 @@ uq.cl <- not_shared_feats(final.filt, "guide")
 # write out
 write_csv(uq.cl, sprintf('%s/KO_sigpos_uq-guide.csv', out.dir))
 
-# compared to total # of guides each cluster:
-no.uq.guides <- uq.cl %>%
-  t() %>%
-  as_tibble() %>%
-  tibble::rownames_to_column("louvain") %>%
-  rename(guide = V1) %>%
-  count(louvain)
-print("Number of guides that are not unique to cluster:")
+print("Number of guides in each cluster:")
 final.filt %>%
-  count(guide) %>%
-  mutate(diff = nn - (no.uq.guides$n)) %>%
-  cbind(., no.uq.guides$louvain) %>%
+  count(louvain, guide) %>%
+  print()
+print("Number of genes in each cluster:")
+final.filt %>%
+  count(louvain) %>%
   print()
 
 # visualize no. genes associate w/ each guide in each cluster
 print(paste("Number of distinct genes associate with all guides:",
             n_distinct(guide_data$gene)) ) # for reference
 # why is this one guide missing??
-cell_meta$guide_cov[which(!(unique(cell_meta$guide_cov) %in% unique(guide_data$guide)))]
+print(
+  cell_meta$guide_cov[which(!(unique(cell_meta$guide_cov) %in% unique(guide_data$guide)))]
+  )
 
 clust_guide <- final.filt %>%
   count(louvain, guide)
