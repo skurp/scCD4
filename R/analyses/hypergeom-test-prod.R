@@ -110,12 +110,17 @@ uq.ge <- not_shared_feats(final.filt, "gene")
 uq.cl <- not_shared_feats(final.filt, "guide")
 
 # compared to total # of guides each cluster:
-no.unique.guides <- lapply(uq.cl, function(cluster){
-  length(cluster)
-})
+no.uq.guides <- uq.cl %>%
+  t() %>%
+  as_tibble() %>%
+  tibble::rownames_to_column("louvain") %>%
+  rename(guide = V1) %>%
+  count(louvain)
+print("Number of guides that are not unique to cluster:")
 final.filt %>%
-  count(louvain) %>%
-  mutate(diff = nn - unlist(no.unique.guides)) %>%
+  count(guide) %>%
+  mutate(diff = nn - (no.uq.guides$n)) %>%
+  cbind(., no.uq.guides$louvain) %>%
   print()
 
 # NEXT
