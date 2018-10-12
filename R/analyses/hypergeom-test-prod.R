@@ -140,56 +140,5 @@ ggplot(clust_guide) +
   labs(x = "Guide", y = "No. Genes") +
   coord_flip() +
   facet_wrap(vars(louvain), nrow = 1) +
-  ggsave('../../out/KO_sigpos_freq.png', width = 20, height = 10, units = 'in')
-
-
-
-
-
-
-##### retry rgate method ######
-# m, total guide cells
-m <- cell_meta %>%
-  select(index, guide_cov, louvain) %>%
-  rename(guide = guide_cov) %>%
-  inner_join(guide_data) %>%
-  count(guide) %>%
-  rename(m = n)
-# n, total gene cells
-n <- cell_meta %>%
-  select(index, guide_cov, louvain) %>%
-  rename(guide = guide_cov) %>%
-  inner_join(guide_data) %>%
-  count(gene)
-# K, size of sample
-K <- cell_meta %>%
-  count(louvain)
-# q, guide-gene combo w/i cluster
-q <- cell_meta %>%
-  select(index, guide_cov, louvain) %>%
-  rename(guide = guide_cov) %>%
-  inner_join(guide_data) %>%
-  count(guide, gene) %>%
-  rename(q = n)
-
-master <- q %>%
-  inner_join(m) %>%
-  inner_join(n)
-
-# test
-p.value <- c()
-for(cluster in sort(unique(cell_meta$louvain)) ){
-  k.clust <- K %>%
-    filter(louvain == cluster)
-  p.value.cluster <- phyper(q = master$q,
-                            m = master$m,
-                            n = master$n,
-                            k = k.clust$n,
-                            lower.tail = FALSE)
-  p.value <<- append(p.value, p.value.cluster)
-}
-# FAIL
-final <- cbind(q, p.value)
-
-# correct for multiple comparisons
+  ggsave(sprintf('../../out/%s/KO_sigpos_freq.png', out.dir), width = 20, height = 10, units = 'in')
 
