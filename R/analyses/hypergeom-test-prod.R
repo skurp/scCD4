@@ -32,19 +32,19 @@ gene_data_full <- read_tsv(gene_loc_full) %>%
   select(cluster, gene) %>% sample_frac(1)
 
 # intersect DFs
-# m, total unique gene-guide comobs
-m <- cell_meta %>%
+# K, size of sample, total unique gene-guide combos
+K <- cell_meta %>%
   select(index, guide_cov, louvain) %>%
   rename(guide = guide_cov) %>%
   inner_join(guide_data) %>%
   count(guide, gene) %>% # collapse into guide-gene combos
   mutate(key = paste0(guide, gene))
-# n, (total gene-guide combos) - (unique gene-guide-combos)
+# m, total number of cells in cluster
+m <- cell_meta %>%
+  count(louvain)
+# n, (total cells NOT in cluster)
 n <- m %>%
   mutate(n.hyper = nrow(cell_meta) - n)
-# K, size of sample
-K <- cell_meta %>%
-  count(louvain)
 # q, guide-gene combo w/i cluster
 q <- cell_meta %>%
   select(index, guide_cov, louvain) %>%
@@ -57,34 +57,44 @@ q <- cell_meta %>%
 # P(Observed #x cluster-guide-gene or more)
 #  = 1-P(Observed less than #x)
 # test
-p.value <- c()
-for(cluster in sort(unique(cell_meta$louvain)) ){
-  q.clust <- q %>%
-    filter(louvain == cluster) %>%
-    mutate(key = paste0(guide, gene))
-  k.clust <- K %>%
-    filter(louvain == cluster)
-  m.clust <- m %>%
-    filter(key %in% q.clust$key)
-  n.clust <- n %>%
-    filter(key %in% q.clust$key)
-  p.value.cluster <- phyper(q = q.clust$n,
-                    m = m.clust$n,
-                    n = n.clust$n.hyper,
-                    k = k.clust$n,
-                    lower.tail = FALSE)
-  p.value <<- append(p.value, p.value.cluster)
+hypergeom.test <- function(meta) {
+  p.value <- c()
+  p.adj <- c()
+  for(cluster in sort(unique(cell_meta$louvain)) ){
+    q.clust <- q %>%
+      filter(louvain == cluster) %>%
+      mutate(key = paste0(guide, gene))
+    m.clust <- m %>%
+      filter(louvain == cluster)
+    k.clust <- K %>%
+      filter(key %in% q.clust$key)
+    n.clust <- n %>%
+      filter(louvain == cluster)
+    p.value.cluster <- phyper(q = q.clust$n,
+                              m = m.clust$n,
+                              n = n.clust$n.hyper,
+                              k = k.clust$n,
+                              lower.tail = FALSE)
+    # calculating fdr based on ranks in each cluster...
+    # validate this thinking
+    p.adj.cluster <- p.adjust(p.value.cluster, method = 'fdr')
+    p.value <- append(p.value, p.value.cluster)
+    p.adj <- append(p.adj, p.adj.cluster)
+  }
+  calc <- data.frame(p.value = p.value,
+             p.adjust = p.adj)
+  as_tibble(cbind(q, calc))
 }
 
-final <- as_tibble(cbind(q, p.value))
-final <- final %>%
-  mutate(p.adjust = p.adjust(p.value, method = 'fdr'))
+# calculate
+final <- hypergeom.test(cell_meta)
+final$p.adjust_all <- p.adjust(final$p.value, method = 'fdr')
 # write out csv of guide-gene associated p.vals
 write_csv(final, sprintf('%s/KO_sigpos_p-vals.csv', out.dir) )
 
 # take filter set
 final.filt <- final %>%
-  filter(p.adjust <= 0.01)
+  filter(p.adjust2 <= 0.01)
 
 # function
 # to extract features unique to each cluster
