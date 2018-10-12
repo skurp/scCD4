@@ -8,7 +8,7 @@ library(forcats)
 library(ggplot2)
 
 # all cell-guide - cluster
-path_cell_meta <- "~/ye/scCD4/scanpy/KO_cells.csv"
+path_cell_meta <- "~/ye/projects/scCD4/scanpy/KO_cells.csv"
 cell_meta <- read_csv(path_cell_meta) %>% sample_frac(0.5)
 
 # all guide-gene combos
@@ -113,9 +113,6 @@ final.filt %>%
 # visualize most important combos in each cluster
 # write out csv of guide-gene associated p.vals
 # run entire population on cluster (prod scripts)
-
-# test pull request
-
 
 
 
