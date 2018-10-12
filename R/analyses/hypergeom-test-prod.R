@@ -10,8 +10,9 @@ library(ggplot2)
 
 # Prepare output paths ----------------------------------------------------
 start.date <- Sys.Date()
-out.dir <- sprintf("../out/%s_hypergeom-test", start.date)
+out.dir <- sprintf("../../out/%s_hypergeom-test", start.date)
 dir.create(out.dir)
+dir.create("../../out/logs")
 
 
 # Input data --------------------------------------------------------------
