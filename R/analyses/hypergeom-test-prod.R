@@ -101,7 +101,7 @@ not_shared_feats <- function(hypergeom.analysis, feat) {
       select(feat) %>%
       distinct() %>%
       anti_join(not.clust.feat)
-    colnames(clust.uq.feat) <- sprintf('cluster_%i', i)
+    colnames(clust.uq.feat) <- sprintf('%i', i)
     uq.feat <- append(uq.feat, clust.uq.feat)
   }
   # corece to dataframe
