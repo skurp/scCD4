@@ -7,6 +7,7 @@ library(dplyr)
 library(purrr)
 library(forcats)
 library(ggplot2)
+library(reshape2)
 set.seed(55)
 
 # Prepare output paths ----------------------------------------------------
@@ -101,6 +102,29 @@ plot( x = -log10(ppoints(length(final$p.value))),
       ylab="Observed (-log10)" )
 abline(0,1,lty=45)
 dev.off()
+
+# histogram of nominal and adjusted p-values
+ggplot(final) +
+  geom_histogram(aes(x = p.value), bins = 100) +
+  ggsave(sprintf("%s/p-val.png", out.dir), width = 10, height = 10, units = 'in')
+ggplot(final) +
+  geom_histogram(aes(x = p.adjust), bins = 100) +
+  ggsave(sprintf("%s/p-adj.png", out.dir), width = 10, height = 10, units = 'in')
+ggplot(final) +
+  geom_histogram(aes(x = p.adjust_all), bins = 100) +
+  ggsave(sprintf("%s/p-adj_all.png", out.dir), width = 10, height = 10, units = 'in')
+
+# filter to examine distribution closely
+filt.final <- final %>% filter(p.adjust < 1)
+ggplot(filt.final) +
+  geom_histogram(aes(x = p.adjust), bins = 100) +
+  xlim(0, 0.5) +
+  ggsave(sprintf("%s/p-adj-filt.png", out.dir), width = 10, height = 10, units = 'in')
+filt.final <- final %>% filter(p.adjust_all < 1)
+ggplot(filt.final) +
+  geom_histogram(aes(x = p.adjust_all), bins = 100) +
+  xlim(0, 0.5) +
+  ggsave(sprintf("%s/p-adj_all-filt.png", out.dir), width = 10, height = 10, units = 'in')
 
 # Power analysis
 # https://cran.r-project.org/web/packages/pwr/vignettes/pwr-vignette.html
