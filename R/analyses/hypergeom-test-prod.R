@@ -7,6 +7,7 @@ library(dplyr)
 library(purrr)
 library(forcats)
 library(ggplot2)
+set.seed(55)
 
 # Prepare output paths ----------------------------------------------------
 start.date <- Sys.Date()
@@ -101,7 +102,10 @@ plot( x = -log10(ppoints(length(final$p.value))),
 abline(0,1,lty=45)
 dev.off()
 
-# to do: power analysis
+# Power analysis
+# https://cran.r-project.org/web/packages/pwr/vignettes/pwr-vignette.html
+# determine appropriate effect size (conventional estimations...)
+#
 
 # take filter set
 final.filt <- final %>%
