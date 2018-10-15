@@ -7,6 +7,7 @@ library(dplyr)
 library(purrr)
 library(forcats)
 library(ggplot2)
+set.seed(55)
 
 # Prepare output paths ----------------------------------------------------
 start.date <- Sys.Date()
@@ -77,7 +78,7 @@ hypergeom.test <- function(meta) {
                               lower.tail = FALSE)
     # calculating fdr based on ranks in each cluster...
     # validate this thinking
-    p.adj.cluster <- p.adjust(p.value.cluster, method = 'fdr')
+    p.adj.cluster <- p.adjust(p.value.cluster, method = 'bonferroni')
     p.value <- append(p.value, p.value.cluster)
     p.adj <- append(p.adj, p.adj.cluster)
   }
@@ -88,7 +89,7 @@ hypergeom.test <- function(meta) {
 
 # calculate
 final <- hypergeom.test(cell_meta)
-final$p.adjust_all <- p.adjust(final$p.value, method = 'fdr')
+final$p.adjust_all <- p.adjust(final$p.value, method = 'bonferroni')
 # write out csv of guide-gene associated p.vals
 # write_csv(final, sprintf('%s/KO_sigpos_p-vals.csv', out.dir) )
 
@@ -101,14 +102,21 @@ plot( x = -log10(ppoints(length(final$p.value))),
 abline(0,1,lty=45)
 dev.off()
 
+# histogram of nominal and adjusted p-values
+library(reshape2)
+melt.final <- final %>%
+  melt() %>%
+  filter(variable %in% c("p.value", "p.adjust", "p.adjust_all")) %>%
+  filter(value < 1)
+ggplot(melt.final) +
+  geom_histogram(aes(x =  value), bins = 100) +
+  facet_wrap(vars(variable), nrow = 3) +
+  ggsave(sprintf("%s/pval_dist.png", out.dir), width = 10, height = 10, units = 'in')
+
 # Power analysis
 # https://cran.r-project.org/web/packages/pwr/vignettes/pwr-vignette.html
 # determine appropriate effect size (conventional estimations...)
-#
 
-# take filter set
-final.filt <- final %>%
-  filter(p.adjust2 <= 0.01)
 
 # function
 # to extract features unique to each cluster
