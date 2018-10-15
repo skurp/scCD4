@@ -18,33 +18,33 @@ dir.create("../../out/logs")
 # Input data --------------------------------------------------------------
 # all cell-guide - cluster
 path_cell_meta <- "~/ye/projects/scanpy/KO_cells.csv"
-cell_meta <- read_csv(path_cell_meta) %>% sample_frac(0.4)
+cell_meta <- read_csv(path_cell_meta) %>% sample_frac(0.1)
 
 # all guide-gene combos
 path_guide_data <- "/ye/yelabstore2/dosageTF/tfko_140/combined/nsnp20.raw.sng.guide_sng.norm.vs0.igtb.guide.de.seurate.txt.meta.guide.meta.txt"
 guide_data <- read_tsv(path_guide_data) %>%
   rename(guide = cluster) %>%
-  select(guide, gene) %>% sample_frac(0.4)
+  select(guide, gene) %>% sample_frac(0.1)
 
 # all cluster-gene combos
 gene_loc_full <- "/ye/yelabstore2/dosageTF/tfko_140/combined/nsnp20.raw.sng.guide_sng.norm.igtb.louvain.de.seurate.meta.louvain.txt"
 gene_data_full <- read_tsv(gene_loc_full) %>%
-  select(cluster, gene) %>% sample_frac(0.4)
+  select(cluster, gene) %>% sample_frac(0.1)
 
 # intersect DFs
-# m, total unique gene-guide comobs
-m <- cell_meta %>%
+# K, size of sample, total unique gene-guide combos
+K <- cell_meta %>%
   select(index, guide_cov, louvain) %>%
   rename(guide = guide_cov) %>%
   inner_join(guide_data) %>%
   count(guide, gene) %>% # collapse into guide-gene combos
   mutate(key = paste0(guide, gene))
-# n, (total gene-guide combos) - (unique gene-guide-combos)
+# m, total number of cells in cluster
+m <- cell_meta %>%
+  count(louvain)
+# n, (total cells NOT in cluster)
 n <- m %>%
   mutate(n.hyper = nrow(cell_meta) - n)
-# K, size of sample
-K <- cell_meta %>%
-  count(louvain)
 # q, guide-gene combo w/i cluster
 q <- cell_meta %>%
   select(index, guide_cov, louvain) %>%
@@ -57,34 +57,58 @@ q <- cell_meta %>%
 # P(Observed #x cluster-guide-gene or more)
 #  = 1-P(Observed less than #x)
 # test
-p.value <- c()
-for(cluster in sort(unique(cell_meta$louvain)) ){
-  q.clust <- q %>%
-    filter(louvain == cluster) %>%
-    mutate(key = paste0(guide, gene))
-  k.clust <- K %>%
-    filter(louvain == cluster)
-  m.clust <- m %>%
-    filter(key %in% q.clust$key)
-  n.clust <- n %>%
-    filter(key %in% q.clust$key)
-  p.value.cluster <- phyper(q = q.clust$n,
-                            m = m.clust$n,
-                            n = n.clust$n.hyper,
-                            k = k.clust$n,
-                            lower.tail = FALSE)
-  p.value <<- append(p.value, p.value.cluster)
+hypergeom.test <- function(meta) {
+  p.value <- c()
+  p.adj <- c()
+  for(cluster in sort(unique(cell_meta$louvain)) ){
+    q.clust <- q %>%
+      filter(louvain == cluster) %>%
+      mutate(key = paste0(guide, gene))
+    m.clust <- m %>%
+      filter(louvain == cluster)
+    k.clust <- K %>%
+      filter(key %in% q.clust$key)
+    n.clust <- n %>%
+      filter(louvain == cluster)
+    p.value.cluster <- phyper(q = q.clust$n,
+                              m = m.clust$n,
+                              n = n.clust$n.hyper,
+                              k = k.clust$n,
+                              lower.tail = FALSE)
+    # calculating fdr based on ranks in each cluster...
+    # validate this thinking
+    p.adj.cluster <- p.adjust(p.value.cluster, method = 'fdr')
+    p.value <- append(p.value, p.value.cluster)
+    p.adj <- append(p.adj, p.adj.cluster)
+  }
+  calc <- data.frame(p.value = p.value,
+                     p.adjust = p.adj)
+  as_tibble(cbind(q, calc))
 }
 
-final <- as_tibble(cbind(q, p.value))
-final <- final %>%
-  mutate(p.adjust = p.adjust(p.value, method = 'fdr'))
+# calculate
+final <- hypergeom.test(cell_meta)
+final$p.adjust_all <- p.adjust(final$p.value, method = 'fdr')
 # write out csv of guide-gene associated p.vals
-# write_csv(final, sprintf('../../out/%s/KO_sigpos_p-vals.csv', out.dir) )
+# write_csv(final, sprintf('%s/KO_sigpos_p-vals.csv', out.dir) )
+
+# Q-Q plot of p-values
+png(sprintf("%s/qq-test.png", out.dir), width = 8, height = 9, units = 'in', res = 200)
+plot( x = -log10(ppoints(length(final$p.value))),
+      y = -log10(sort(final$p.value)),
+      xlab= "Expected (-log10)",
+      ylab="Observed (-log10)" )
+abline(0,1,lty=45)
+dev.off()
+
+# Power analysis
+# https://cran.r-project.org/web/packages/pwr/vignettes/pwr-vignette.html
+# determine appropriate effect size (conventional estimations...)
+#
 
 # take filter set
 final.filt <- final %>%
-  filter(p.adjust <= 0.01)
+  filter(p.adjust2 <= 0.01)
 
 # function
 # to extract features unique to each cluster
@@ -101,7 +125,7 @@ not_shared_feats <- function(hypergeom.analysis, feat) {
       select(feat) %>%
       distinct() %>%
       anti_join(not.clust.feat)
-    colnames(clust.uq.feat) <- sprintf('cluster_%i', i)
+    colnames(clust.uq.feat) <- sprintf('%i', i)
     uq.feat <- append(uq.feat, clust.uq.feat)
   }
   # corece to dataframe
@@ -112,37 +136,29 @@ not_shared_feats <- function(hypergeom.analysis, feat) {
 # which genes are not shared between clusters?
 uq.ge <- not_shared_feats(final.filt, "gene")
 # write out
-# write_csv(uq.ge, sprintf('../../out/%s/KO_sigpos_uq-gene.csv', out.dir))
+# write_csv(uq.ge, sprintf('%s/KO_sigpos_uq-gene.csv', out.dir))
 
 # which guides are not shared between clusters?
 uq.cl <- not_shared_feats(final.filt, "guide")
 # write out
-# write_csv(uq.cl, sprintf('../../out/%s/KO_sigpos_uq-guide.csv', out.dir))
+# write_csv(uq.cl, sprintf('%s/KO_sigpos_uq-guide.csv', out.dir))
 
-# which guide-gene combos are not shared between clusters?
-foo <- final.filt %>%
-  mutate(key =  paste(guide, gene, sep = "-"))
-uq.foo <- not_shared_feats(foo, "key")
-
-# compared to total # of guides each cluster:
-no.uq.guides <- uq.cl %>%
-  t() %>%
-  as_tibble() %>%
-  tibble::rownames_to_column("louvain") %>%
-  rename(guide = V1) %>%
-  count(louvain)
-print("Number of guides that are not unique to cluster:")
+print("Number of guides in each cluster:")
 final.filt %>%
-  count(guide) %>%
-  mutate(diff = nn - (no.uq.guides$n)) %>%
-  cbind(., no.uq.guides$louvain) %>%
+  count(louvain, guide) %>%
+  print()
+print("Number of genes in each cluster:")
+final.filt %>%
+  count(louvain) %>%
   print()
 
 # visualize no. genes associate w/ each guide in each cluster
 print(paste("Number of distinct genes associate with all guides:",
             n_distinct(guide_data$gene)) ) # for reference
 # why is this one guide missing??
-cell_meta$guide_cov[which(!(unique(cell_meta$guide_cov) %in% unique(guide_data$guide)))]
+print(
+  cell_meta$guide_cov[which(!(unique(cell_meta$guide_cov) %in% unique(guide_data$guide)))]
+)
 
 clust_guide <- final.filt %>%
   count(louvain, guide)
@@ -154,52 +170,3 @@ ggplot(clust_guide) +
   coord_flip() +
   facet_wrap(vars(louvain), nrow = 1) +
   ggsave(sprintf('%s/KO_sigpos_freq.png', out.dir), width = 30, height = 20, units = 'in')
-
-
-
-##### retry rgate method ######
-# m, total guide cells
-m <- cell_meta %>%
-  select(index, guide_cov, louvain) %>%
-  rename(guide = guide_cov) %>%
-  inner_join(guide_data) %>%
-  count(guide) %>%
-  rename(m = n)
-# n, total gene cells
-n <- cell_meta %>%
-  select(index, guide_cov, louvain) %>%
-  rename(guide = guide_cov) %>%
-  inner_join(guide_data) %>%
-  count(gene)
-# K, size of sample
-K <- cell_meta %>%
-  count(louvain)
-# q, guide-gene combo w/i cluster
-q <- cell_meta %>%
-  select(index, guide_cov, louvain) %>%
-  rename(guide = guide_cov) %>%
-  inner_join(guide_data) %>%
-  count(guide, gene) %>%
-  rename(q = n)
-
-master <- q %>%
-  inner_join(m) %>%
-  inner_join(n)
-
-# test
-p.value <- c()
-for(cluster in sort(unique(cell_meta$louvain)) ){
-  k.clust <- K %>%
-    filter(louvain == cluster)
-  p.value.cluster <- phyper(q = master$q,
-                            m = master$m,
-                            n = master$n,
-                            k = k.clust$n,
-                            lower.tail = FALSE)
-  p.value <<- append(p.value, p.value.cluster)
-}
-# FAIL
-final <- cbind(q, p.value)
-
-# correct for multiple comparisons
-
