@@ -12,7 +12,7 @@ set.seed(55)
 
 # Prepare output paths ----------------------------------------------------
 start.date <- Sys.Date()
-out.dir <- sprintf("../../out/%s_hypergeom-test", start.date)
+out.dir <- sprintf("../../out/%s_hypergeom-test-bonferroni", start.date)
 dir.create(out.dir)
 dir.create("../../out/logs")
 
@@ -79,7 +79,7 @@ hypergeom.test <- function(meta) {
                               lower.tail = FALSE)
     # calculating fdr based on ranks in each cluster...
     # validate this thinking
-    p.adj.cluster <- p.adjust(p.value.cluster, method = 'fdr')
+    p.adj.cluster <- p.adjust(p.value.cluster, method = 'bonferroni')
     p.value <- append(p.value, p.value.cluster)
     p.adj <- append(p.adj, p.adj.cluster)
   }
@@ -90,7 +90,7 @@ hypergeom.test <- function(meta) {
 
 # calculate
 final <- hypergeom.test(cell_meta)
-final$p.adjust_all <- p.adjust(final$p.value, method = 'fdr')
+final$p.adjust_all <- p.adjust(final$p.value, method = 'bonferroni')
 # write out csv of guide-gene associated p.vals
 write_csv(final, sprintf('%s/KO_sigpos_p-vals.csv', out.dir) )
 
