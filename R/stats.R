@@ -10,7 +10,7 @@ hypergeom_test <- function(meta) {
   p.value.deplete <- c()
   p.adj.enrich <- c()
   p.adj.deplete <- c()
-  for(cluster in sort(unique(meta['louvain'])) ){
+  for(cluster in sort(unique(meta[['louvain']])) ){
     q.clust <- q %>%
       filter(louvain == cluster) %>%
       mutate(key = paste0(guide, gene))
@@ -54,7 +54,7 @@ hypergeom_test <- function(meta) {
 # p-value distributions
 plot_pval_distrib <- function(pValueDF, p_value_type) {
   plot_list <- list()
-  for( cluster in sort(unique(pValues['louvain']))) {
+  for( cluster in sort(unique(pValueDF[['louvain']]))) {
     clust <- final.vals %>%
       filter(louvain == cluster)
     plot <- ggplot(clust) +
