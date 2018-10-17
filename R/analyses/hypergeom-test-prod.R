@@ -12,7 +12,7 @@ set.seed(55)
 
 # Prepare output paths ----------------------------------------------------
 start.date <- Sys.Date()
-out.dir <- sprintf("../../out/%s_hypergeom-test-bonferroni", start.date)
+out.dir <- sprintf("../../out/%s_hypergeom-test-twoTail", start.date)
 dir.create(out.dir)
 dir.create("../../out/logs")
 
@@ -60,7 +60,8 @@ q <- cell_meta %>%
 #  = 1-P(Observed less than #x)
 # test
 hypergeom.test <- function(meta) {
-  p.value <- c()
+  p.value.enrich <- c()
+  p.value.deplete <- c()
   p.adj <- c()
   for(cluster in sort(unique(cell_meta$louvain)) ){
     q.clust <- q %>%
@@ -72,63 +73,76 @@ hypergeom.test <- function(meta) {
       filter(key %in% q.clust$key)
     n.clust <- n %>%
       filter(louvain == cluster)
-    p.value.cluster <- phyper(q = q.clust$n,
-                              m = m.clust$n,
-                              n = n.clust$n.hyper,
-                              k = k.clust$n,
-                              lower.tail = FALSE)
+    # test for over representation (enrichment)
+    p.value.cluster.enrich <- phyper(q = q.clust$n - 1,
+                                     m = m.clust$n,
+                                     n = n.clust$n.hyper,
+                                     k = k.clust$n,
+                                     lower.tail = FALSE)
+    # test for under representation (depletion)
+    p.value.cluster.deplete <- phyper(q = q.clust$n,
+                                      m = m.clust$n,
+                                      n = n.clust$n.hyper,
+                                      k = k.clust$n,
+                                      lower.tail = TRUE)
     # calculating fdr based on ranks in each cluster...
     # validate this thinking
-    p.adj.cluster <- p.adjust(p.value.cluster, method = 'bonferroni')
-    p.value <- append(p.value, p.value.cluster)
-    p.adj <- append(p.adj, p.adj.cluster)
+    #p.adj.cluster <- p.adjust(p.value.cluster, method = 'fdr')
+    p.value.enrich <- append(p.value.enrich, p.value.cluster.enrich)
+    p.value.deplete <- append(p.value.deplete, p.value.cluster.deplete)
+    #p.adj <- append(p.adj, p.adj.cluster)
   }
-  calc <- data.frame(p.value = p.value,
-             p.adjust = p.adj)
+  calc <- data.frame(p.value.enrich = p.value.enrich,
+                     p.value.deplete = p.value.deplete)
+                     #,p.adjust = p.adj
   as_tibble(cbind(q, calc))
 }
 
 # calculate
 final <- hypergeom.test(cell_meta)
-final$p.adjust_all <- p.adjust(final$p.value, method = 'bonferroni')
+#final$p.adjust_all <- p.adjust(final$p.value, method = 'fdr')
 # write out csv of guide-gene associated p.vals
 write_csv(final, sprintf('%s/KO_sigpos_p-vals.csv', out.dir) )
 
 # Q-Q plot of p-values
-png(sprintf("%s/qq-test.png", out.dir), width = 8, height = 9, units = 'in', res = 200)
-plot( x = -log10(ppoints(length(final$p.value))),
-      y = -log10(sort(final$p.value)),
-      xlab= "Expected (-log10)",
-      ylab="Observed (-log10)" )
-abline(0,1,lty=45)
-dev.off()
+# png(sprintf("%s/qq-test.png", out.dir), width = 8, height = 9, units = 'in', res = 200)
+# plot( x = -log10(ppoints(length(final$p.value))),
+#       y = -log10(sort(final$p.value)),
+#       xlab= "Expected (-log10)",
+#       ylab="Observed (-log10)" )
+# abline(0,1,lty=45)
+# dev.off()
 
 # histogram of nominal and adjusted p-values
 ggplot(final) +
-  geom_histogram(aes(x = p.value), bins = 100) +
-  ggtitle("Nominal p-values") +
-  ggsave(sprintf("%s/p-val.png", out.dir), width = 10, height = 10, units = 'in')
+  geom_histogram(aes(x = p.value.enrich), bins = 50) +
+  ggtitle("Nominal Enriched p-values") +
+  ggsave(sprintf("%s/p-val-enrich.png", out.dir), width = 10, height = 10, units = 'in')
 ggplot(final) +
-  geom_histogram(aes(x = p.adjust), bins = 100) +
-  ggtitle("Adjusted p-values") +
-  ggsave(sprintf("%s/p-adj.png", out.dir), width = 10, height = 10, units = 'in')
-ggplot(final) +
-  geom_histogram(aes(x = p.adjust_all), bins = 100) +
-  ggtitle("Adjusted_all p-values") +
-  ggsave(sprintf("%s/p-adj_all.png", out.dir), width = 10, height = 10, units = 'in')
-
-# filter to examine distribution closely
-filt.final <- final %>% filter(p.adjust < 1)
-ggplot(filt.final) +
-  geom_histogram(aes(x = p.adjust), bins = 100) +
-  xlim(0, 0.5) +
-  ggtitle("Adjusted p-values") +
-  ggsave(sprintf("%s/p-adj-filt.png", out.dir), width = 10, height = 10, units = 'in')
-filt.final <- final %>% filter(p.adjust_all < 1)
-ggplot(filt.final) +
-  geom_histogram(aes(x = p.adjust_all), bins = 100) +
-  xlim(0, 0.5) +
-  ggtitle("Adjusted_all p-values") +
-  ggsave(sprintf("%s/p-adj_all-filt.png", out.dir), width = 10, height = 10, units = 'in')
+  geom_histogram(aes(x = p.value.deplete), bins = 50) +
+  ggtitle("Nominal Depleted p-values") +
+  ggsave(sprintf("%s/p-val-deplete.png", out.dir), width = 10, height = 10, units = 'in')
+# ggplot(final) +
+#   geom_histogram(aes(x = p.adjust), bins = 100) +
+#   ggtitle("Adjusted p-values") +
+#   ggsave(sprintf("%s/p-adj.png", out.dir), width = 10, height = 10, units = 'in')
+# ggplot(final) +
+#   geom_histogram(aes(x = p.adjust_all), bins = 100) +
+#   ggtitle("Adjusted_all p-values") +
+#   ggsave(sprintf("%s/p-adj_all.png", out.dir), width = 10, height = 10, units = 'in')
+#
+# # filter to examine distribution closely
+# filt.final <- final %>% filter(p.adjust < 1)
+# ggplot(filt.final) +
+#   geom_histogram(aes(x = p.adjust), bins = 100) +
+#   xlim(0, 0.5) +
+#   ggtitle("Adjusted p-values") +
+#   ggsave(sprintf("%s/p-adj-filt.png", out.dir), width = 10, height = 10, units = 'in')
+# filt.final <- final %>% filter(p.adjust_all < 1)
+# ggplot(filt.final) +
+#   geom_histogram(aes(x = p.adjust_all), bins = 100) +
+#   xlim(0, 0.5) +
+#   ggtitle("Adjusted_all p-values") +
+#   ggsave(sprintf("%s/p-adj_all-filt.png", out.dir), width = 10, height = 10, units = 'in')
 
 
