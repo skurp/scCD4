@@ -11,3 +11,7 @@ Encoding: UTF-8
 LazyData: true
 URL: http://github.com/skurp/scCD4
 BugReports: http://github.com/skurp/scCD4
+Imports: dplyr,
+    readr,
+    ggplot2,
+    gridExtra
