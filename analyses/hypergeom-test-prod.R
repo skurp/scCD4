@@ -3,13 +3,19 @@
 
 # Depends -----------------------------------------------------------------
 devtools::load_all()
+library(readr)
+library(dplyr)
+library(purrr)
+library(forcats)
+library(ggplot2)
+library(reshape2)
 set.seed(55)
 
 # Prepare output paths ----------------------------------------------------
 start.date <- Sys.Date()
-out.dir <- sprintf("../../out/%s_hypergeom-test-twoTail", start.date)
+out.dir <- sprintf("../out/%s_hypergeom-test", start.date)
 dir.create(out.dir)
-dir.create("../../out/logs")
+dir.create("../out/logs")
 
 
 # Input data --------------------------------------------------------------
@@ -52,7 +58,7 @@ q <- cell_meta %>%
 # calculate
 final <- hypergeom_test(cell_meta)
 # write out csv of guide-gene associated p.vals
-write_csv(final, sprintf('%s/KO_sigpos_p-vals.csv', out.dir) )
+write_csv(final, sprintf('%s/KO_p-vals.csv', out.dir) )
 
 # Q-Q plot of p-values
 # png(sprintf("%s/qq-test.png", out.dir), width = 8, height = 9, units = 'in', res = 200)
@@ -64,5 +70,28 @@ write_csv(final, sprintf('%s/KO_sigpos_p-vals.csv', out.dir) )
 # dev.off()
 
 # histogram of nominal and adjusted p-values
-plot_pval_distrib(final, p_value_enrich)
-plot_pval_distrib(final, p_value_deplete)
+# histogram of nominal and adjusted p-values
+melt.final <- final %>%
+  melt(measure.vars = c("louvain"),
+       id.vars = c("p_value_enrich", "p_value_deplete", "p_adj_enrich", "p_adj_deplete"))
+# enriched test
+ggplot(melt.final) +
+  geom_histogram(aes(x =  p_value_enrich), bins = 100) +
+  facet_wrap(vars(value), nrow = 9, scales = "free") +
+  ggsave(sprintf("%s/p-val-enrich.png", out.dir), width = 15, height = 30, units = 'in')
+# depleted test
+ggplot(melt.final) +
+  geom_histogram(aes(x =  p_value_deplete), bins = 100) +
+  facet_wrap(vars(value), nrow = 9, scales = "free") +
+  ggsave(sprintf("%s/p-val-deplete.png", out.dir), width = 15, height = 30, units = 'in')
+# FDR enriched test
+ggplot(melt.final) +
+  geom_histogram(aes(x =  p_adj_enrich), bins = 100) +
+  facet_wrap(vars(value), nrow = 9, scales = "free") +
+  ggsave(sprintf("%s/q-val-enrich.png", out.dir), width = 15, height = 30, units = 'in')
+# FDR depleted test
+ggplot(melt.final) +
+  geom_histogram(aes(x =  p_adj_deplete), bins = 100) +
+  facet_wrap(vars(value), nrow = 9, scales = "free") +
+  ggsave(sprintf("%s/q-val-deplete.png", out.dir), width = 15, height = 30, units = 'in')
+
