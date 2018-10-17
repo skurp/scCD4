@@ -51,19 +51,3 @@ hypergeom_test <- function(meta) {
 
 # Visualizations ----------------------------------------------------------
 
-# p-value distributions
-plot_pval_distrib <- function(pValueDF, p_value_type) {
-  plot_list <- list()
-  for( cluster in sort(unique(pValueDF[['louvain']]))) {
-    clust <- final.vals %>%
-      filter(louvain == cluster)
-    plot <- ggplot(clust) +
-      geom_histogram(aes(x = p_value_type), bins = 100) +
-      ggtitle(sprintf("Cluster %i", cluster))
-    plot_list <- append(plot_list, plot)
-  }
-  gridExtra::grid.arrange(grobs = plot_list, ncol = 3, nrow = 3) ## display plot
-  ggsave(sprintf("%s/%s.png", out.dir, p_value_type),
-         arrangeGrob(grobs = plot_list, ncol = 3, nrow = 3),
-         width = 15, height = 15, units = 'in')
-}
