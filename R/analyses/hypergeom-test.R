@@ -20,7 +20,7 @@ dir.create("../../out/logs")
 # Input data --------------------------------------------------------------
 # all cell-guide - cluster
 path_cell_meta <- "~/ye/projects/scanpy/KO_cells.csv"
-cell_meta <- read_csv(path_cell_meta) %>% sample_frac(0.1)
+cell_meta <- read_csv(path_cell_meta) %>%  sample_frac(0.1)
 
 # all guide-gene combos
 path_guide_data <- "/ye/yelabstore2/dosageTF/tfko_140/combined/nsnp20.raw.sng.guide_sng.norm.vs0.igtb.guide.de.seurate.txt.meta.guide.meta.txt"
@@ -60,7 +60,8 @@ q <- cell_meta %>%
 #  = 1-P(Observed less than #x)
 # test
 hypergeom.test <- function(meta) {
-  p.value <- c()
+  p.value.enrich <- c()
+  p.value.deplete <- c()
   p.adj <- c()
   for(cluster in sort(unique(cell_meta$louvain)) ){
     q.clust <- q %>%
@@ -72,25 +73,34 @@ hypergeom.test <- function(meta) {
       filter(key %in% q.clust$key)
     n.clust <- n %>%
       filter(louvain == cluster)
-    p.value.cluster <- phyper(q = q.clust$n,
+    # test for over representation (enrichment)
+    p.value.cluster.enrich <- phyper(q = q.clust$n - 1,
                               m = m.clust$n,
                               n = n.clust$n.hyper,
                               k = k.clust$n,
                               lower.tail = FALSE)
+    # test for under representation (depletion)
+    p.value.cluster.deplete <- phyper(q = q.clust$n,
+                              m = m.clust$n,
+                              n = n.clust$n.hyper,
+                              k = k.clust$n,
+                              lower.tail = TRUE)
     # calculating fdr based on ranks in each cluster...
     # validate this thinking
-    p.adj.cluster <- p.adjust(p.value.cluster, method = 'bonferroni')
-    p.value <- append(p.value, p.value.cluster)
+    p.adj.cluster <- p.adjust(p.value.cluster, method = 'fdr')
+    p.value.enrich <- append(p.value.enrich, p.value.cluster.enrich)
+    p.value.deplete <- append(p.value.deplete, p.value.cluster.deplete)
     p.adj <- append(p.adj, p.adj.cluster)
   }
-  calc <- data.frame(p.value = p.value,
+  calc <- data.frame(p.value.enrich = p.value.enrich,
+                     p.value.deplete = p.value.deplete,
                      p.adjust = p.adj)
   as_tibble(cbind(q, calc))
 }
 
 # calculate
 final <- hypergeom.test(cell_meta)
-final$p.adjust_all <- p.adjust(final$p.value, method = 'bonferroni')
+final$p.adjust_all <- p.adjust(final$p.value, method = 'fdr')
 # write out csv of guide-gene associated p.vals
 # write_csv(final, sprintf('%s/KO_sigpos_p-vals.csv', out.dir) )
 
