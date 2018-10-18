@@ -49,5 +49,28 @@ hypergeom_test <- function(meta, q, m, K, n) {
 }
 
 
+# Extract features unique to each cluster
+# as compared to all other clusters
+not_shared_feats <- function(hypergeom.analysis, feat) {
+  uq.feat <- list()
+  for( i in sort(unique(hypergeom.analysis[['louvain']]))) {
+    not.clust.feat <- hypergeom.analysis %>%
+      filter(louvain != i) %>%
+      select(feat) %>%
+      distinct()
+    clust.uq.feat <- hypergeom.analysis %>%
+      filter(louvain == i) %>%
+      select(feat) %>%
+      distinct() %>%
+      anti_join(not.clust.feat)
+    colnames(clust.uq.feat) <- sprintf('%i', i)
+    uq.feat <- append(uq.feat, clust.uq.feat)
+  }
+  # corece to dataframe
+  lapply(uq.feat,`length<-`, max(lengths(uq.feat))) %>%
+    as.data.frame()
+}
+
+
 # Visualizations ----------------------------------------------------------
 
