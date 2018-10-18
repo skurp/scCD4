@@ -56,7 +56,7 @@ q <- cell_meta %>%
   count(louvain, guide, gene)
 
 # calculate
-final <- hypergeom_test(cell_meta)
+final <- hypergeom_test(cell_meta, q, m, K, n)
 # write out csv of guide-gene associated p.vals
 write_csv(final, sprintf('%s/KO_p-vals.csv', out.dir) )
 
