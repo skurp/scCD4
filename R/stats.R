@@ -5,7 +5,7 @@
 # Statistics --------------------------------------------------------------
 
 # hypergeometric test calculations
-hypergeom_test <- function(meta) {
+hypergeom_test <- function(meta, q, m, K, n) {
   p.value.enrich <- c()
   p.value.deplete <- c()
   p.adj.enrich <- c()
