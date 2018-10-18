@@ -67,8 +67,10 @@ not_shared_feats <- function(hypergeom.analysis, feat) {
     uq.feat <- append(uq.feat, clust.uq.feat)
   }
   # corece to dataframe
-  lapply(uq.feat,`length<-`, max(lengths(uq.feat))) %>%
+  df <- lapply(uq.feat,`length<-`, max(lengths(uq.feat))) %>%
     as.data.frame()
+  colnames(df) <- as.character(sort(unique(hypergeom.analysis[['louvain']])))
+  df
 }
 
 
