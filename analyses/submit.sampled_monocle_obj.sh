@@ -17,4 +17,4 @@ hostname
 qstat -j $JOB_ID
 
 echo $input
-sampled_monocle_obj.R $input
+Rscript sampled_monocle_obj.R $input
