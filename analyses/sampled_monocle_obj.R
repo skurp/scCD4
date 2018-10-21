@@ -12,6 +12,7 @@
 library(rhdf5)
 library(monocle)
 library(dplyr)
+library(readr)
 library(tictoc)
 
 # Import ------------------------------------------------------------------
@@ -29,7 +30,7 @@ obs <- read_csv(path_cell_meta) # observations, or rows, including metadata
 vars <- h5read(file_loc, "/var") # variables, or columns
 
 # subset a sample to effectively
-clust_indices <- sample(obs$louvain, 20000)
+clust_indices <- sample(1:nrow(obs), 20000)
 h5closeAll()
 data <- h5read(file_loc, "/X", index = list(NULL, clust_indices)) #normalized matrix
 obs_indices <- obs[clust_indices,]
