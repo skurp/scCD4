@@ -24,13 +24,13 @@ path_cell_meta <- "~/ye/projects/scanpy/KO_cells.csv"
 cell_meta <- read_csv(path_cell_meta) %>% sample_frac(1)
 
 # all guide-gene combos
-path_guide_data <- "/ye/yelabstore2/dosageTF/tfko_140/combined/nsnp20.raw.sng.guide_sng.norm.vs0.igtb.guide.de.seurate.txt.meta.guide.meta.txt"
+path_guide_data <- "/ye/yelabstore2/dosageTF/tfko_140/combined/nsnp20.raw.sng.guide_sng.norm.vs0.igtb.guide.de.seurate.txt.meta.guide.meta.sig.txt"
 guide_data <- read_tsv(path_guide_data) %>%
   rename(guide = cluster) %>%
   select(guide, gene) %>% sample_frac(1)
 
 # all cluster-gene combos
-gene_loc_full <- "/ye/yelabstore2/dosageTF/tfko_140/combined/nsnp20.raw.sng.guide_sng.norm.igtb.louvain.de.seurate.meta.louvain.txt"
+gene_loc_full <- "/ye/yelabstore2/dosageTF/tfko_140/combined/nsnp20.raw.sng.guide_sng.norm.igtb.louvain.de.seurate.meta.louvain.sig.txt"
 gene_data_full <- read_tsv(gene_loc_full) %>%
   select(cluster, gene) %>% sample_frac(1)
 
@@ -61,13 +61,13 @@ final <- hypergeom_test(cell_meta, q, m, K, n)
 write_csv(final, sprintf('%s/KO_p-vals.csv', out.dir) )
 
 # Q-Q plot of p-values
-# png(sprintf("%s/qq-test.png", out.dir), width = 8, height = 9, units = 'in', res = 200)
-# plot( x = -log10(ppoints(length(final$p.value))),
-#       y = -log10(sort(final$p.value)),
-#       xlab= "Expected (-log10)",
-#       ylab="Observed (-log10)" )
-# abline(0,1,lty=45)
-# dev.off()
+png(sprintf("%s/qq-test.png", out.dir), width = 8, height = 9, units = 'in', res = 200)
+plot( x = -log10(ppoints(length(final$p.value))),
+      y = -log10(sort(final$p.value)),
+      xlab= "Expected (-log10)",
+      ylab="Observed (-log10)" )
+abline(0,1,lty=45)
+dev.off()
 
 # histogram of nominal and adjusted p-values
 # histogram of nominal and adjusted p-values
