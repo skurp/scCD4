@@ -38,12 +38,12 @@ obs <- h5read(file_loc, "/obs") # observations, or rows, including metadata
 vars <- h5read(file_loc, "/var") # variables, or columns
 
 print("Total no. cells in clusters:")
-obs %>% 
-  mutate_if(is.array, as.vector) %>% 
+obs %>%
+  mutate_if(is.array, as.vector) %>%
   count(louvain)
 
 # subset cells by cluster indices
-clust_indices <- which(obs$louvain %in% c(0, 1))
+clust_indices <- which(obs$louvain %in% c(0, 8))
 # subset a sample to effectively
 clust_indices <- sample(clust_indices, 20000)
 h5closeAll()
@@ -51,10 +51,10 @@ data <- h5read(file_loc, "/X", index = list(NULL, clust_indices)) #normalized ma
 obs_indices <- obs[clust_indices,]
 
 data <- data %>%
-  t() %>% 
+  t() %>%
   as.data.frame()
 colnames(data) <- c(vars$index)
-data <- cbind(obs_indices, data) %>% 
+data <- cbind(obs_indices, data) %>%
   mutate_if(is.array, as.vector)
 
 print("Dimensions of data:")
@@ -76,7 +76,7 @@ fd <- new("AnnotatedDataFrame", data = gene_annotation)
 # using guassianff() here since data is already normally dist,
 # on raw want to use negbinomial.size()
 HSMM <- newCellDataSet(as(expr_matrix, 'sparseMatrix'),
-                       phenoData = pd, 
+                       phenoData = pd,
                        featureData = fd,
                        lowerDetectionLimit = 0.5,
                        expressionFamily = inv.gaussianff()) # must check this inv.gaussian()
@@ -121,10 +121,10 @@ HSMM <- reduceDimension(HSMM,
 toc()
 
 tic('Density peak clustering.....')
-# run density peak clustering to identify the 
+# run density peak clustering to identify the
 # clusters on the 2-D t-SNE space
-HSMM <- clusterCells(HSMM, 
-                     verbose = F, 
+HSMM <- clusterCells(HSMM,
+                     verbose = F,
                      cores = round(detectCores()*0.9),
                      delta_threshold = 5,
                      rho_threshold = 400)
