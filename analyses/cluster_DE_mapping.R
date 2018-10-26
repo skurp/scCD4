@@ -3,6 +3,7 @@
 
 
 # Depends -----------------------------------------------------------------
+library(tictoc)
 library(monocle)
 library(dplyr)
 library(readr)
@@ -43,9 +44,9 @@ pData(HSMM)$louvain <- as.factor(pData(HSMM)$louvain)
 pData(HSMM)$guide <- as.factor(pData(HSMM)$louvain)
 
 cells_to_be_tested <- pData(HSMM) %>%
-  filter(louvain == 1)
+  filter(louvain == 8)
 genes_to_be_tested <- gene_data_full %>%
-  filter(cluster == 1)
+  filter(cluster == 2)
 
 cds_subset <- HSMM[genes_to_be_tested$gene,]
 
@@ -53,7 +54,7 @@ tic('DE gene test....')
 # perform DE gene test to extract distinguishing genes
 clustering_DEG_genes <- differentialGeneTest(cds_subset,
                                              fullModelFormulaStr = '~louvain',
-                                             cores = 1)
+                                             cores = 4)
 toc()
 
 
