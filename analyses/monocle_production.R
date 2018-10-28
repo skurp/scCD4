@@ -127,11 +127,16 @@ HSMM <- clusterCells(HSMM,
 toc()
 # visualize
 pData(HSMM)$louvain <- as.factor(pData(HSMM)$louvain)
+pData(HSMM)$guide_cov <- as.factor(pData(HSMM)$guide_cov)
+pData(HSMM) <- pData(HSMM) %>%
+  mutate(wt = (pData(HSMM)$guide_cov == "0"))
 # facet plot all phenotypically encoded data types
 louv_plot <- plot_cell_clusters(HSMM, color_by = 'louvain')
 clust_plot <- plot_cell_clusters(HSMM, color_by = 'Cluster')
-png(sprintf('%s/subclusters.png', out.dir), width = 20, height = 15, units = 'in', res = 200)
-gridExtra::grid.arrange(louv_plot, clust_plot, ncol = 2)
+guide_plot <- plot_cell_clusters(HSMM, color_by = 'guide_cov')
+wt_plot <-  plot_cell_clusters(HSMM, color_by = 'wt')
+png(sprintf('%s/subclusters.png', out.dir), width = 20, height = 20, units = 'in', res = 200)
+gridExtra::grid.arrange(clust_plot, louv_plot, wt, guide_plot, ncol = 2, nrow = 2)
 dev.off()
 
 # visualize cell local density (P) vs.
