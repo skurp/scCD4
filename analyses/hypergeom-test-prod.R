@@ -62,14 +62,13 @@ write_csv(final, sprintf('%s/KO_p-vals.csv', out.dir) )
 
 # Q-Q plot of p-values
 png(sprintf("%s/qq-test.png", out.dir), width = 8, height = 9, units = 'in', res = 200)
-plot( x = -log10(ppoints(length(final$p.value))),
-      y = -log10(sort(final$p.value)),
+plot( x = -log10(ppoints(length(final$p_value_enrich))),
+      y = -log10(sort(final$p_value_enrich)),
       xlab= "Expected (-log10)",
       ylab="Observed (-log10)" )
 abline(0,1,lty=45)
 dev.off()
 
-# histogram of nominal and adjusted p-values
 # histogram of nominal and adjusted p-values
 melt.final <- final %>%
   melt(measure.vars = c("louvain"),
