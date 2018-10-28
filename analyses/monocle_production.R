@@ -23,7 +23,6 @@ dir.create(out.dir)
 print('Number of cores:')
 print(detectCores())
 
-
 # Import ------------------------------------------------------------------
 tic('Importing & Preparing Data.....')
 
@@ -34,18 +33,12 @@ file_loc <- "/ye/yelabstore2/dosageTF/tfko_140/combined/nsnp20.raw.sng.guide_sng
 h5ls(file_loc)
 
 # import meta data
-obs <- h5read(file_loc, "/obs") # observations, or rows, including metadata
+path_cell_meta <- "~/ye/projects/scanpy/KO_cells.csv"
+obs <- read_csv(path_cell_meta) # observations, or rows, including metadata
 vars <- h5read(file_loc, "/var") # variables, or columns
 
-print("Total no. cells in clusters:")
-obs %>%
-  mutate_if(is.array, as.vector) %>%
-  count(louvain)
-
-# subset cells by cluster indices
-clust_indices <- which(obs$louvain %in% c(0, 8))
 # subset a sample to effectively
-clust_indices <- sample(clust_indices, 20000)
+clust_indices <- sample(1:nrow(obs), 20000)
 h5closeAll()
 data <- h5read(file_loc, "/X", index = list(NULL, clust_indices)) #normalized matrix
 obs_indices <- obs[clust_indices,]
