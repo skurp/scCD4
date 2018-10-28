@@ -160,7 +160,8 @@ dev.off()
 tic('DE gene test....')
 # perform DE gene test to extract distinguishing genes
 clustering_DEG_genes <- differentialGeneTest(HSMM,
-                                             fullModelFormulaStr = '~louvain',
+                                             fullModelFormulaStr = '~guide_cov',
+                                             #reducedModelFormulaStr = '~louvain',
                                              cores = round(detectCores()*0.9))
 toc()
 
@@ -184,8 +185,12 @@ louv_plot <- plot_cell_trajectory(HSMM, color_by = "louvain")
 clust_plot <- plot_cell_trajectory(HSMM, color_by = "Cluster")
 state_plot <- plot_cell_trajectory(HSMM, color_by = "State")
 pseudo_plot <- plot_cell_trajectory(HSMM, color_by = "Pseudotime")
-png(sprintf('%s/trajectory.png', out.dir), width = 20, height = 15, units = 'in', res = 200)
-gridExtra::grid.arrange(louv_plot, clust_plot, state_plot, pseudo_plot, ncol = 2, nrow = 2)
+guide_plot <- plot_cell_trajectory(HSMM, color_by = "guide_cov")
+wt_plot <- plot_cell_trajectory(HSMM, color_by = "wt")
+png(sprintf('%s/trajectory.png', out.dir), width = 30, height = 20, units = 'in', res = 200)
+gridExtra::grid.arrange(louv_plot, clust_plot, state_plot,
+                        pseudo_plot, guide_plot, wt_plot,
+                        ncol = 3, nrow = 2)
 dev.off()
 
 # save object for futher use
