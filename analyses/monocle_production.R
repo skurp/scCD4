@@ -41,14 +41,14 @@ vars <- h5read(file_loc, "/var") # variables, or columns
 # subset a sample to effectively
 clust_indices <- sample(1:nrow(obs), 20000)
 h5closeAll()
-data <- h5read(file_loc, "/X", index = list(NULL, clust_indices)) #normalized matrix
+data <- h5read(file_loc, "/X") #, index = list(NULL, clust_indices)) #normalized matrix
 obs_indices <- obs[clust_indices,]
 
 data <- data %>%
   t() %>%
   as.data.frame()
 colnames(data) <- c(vars$index)
-data <- cbind(obs_indices, data) %>%
+data <- cbind(obs, data) %>%
   mutate_if(is.array, as.vector)
 
 print("Dimensions of data:")
@@ -105,7 +105,7 @@ dev.off()
 tic('Calc PCs and reduce via tSNE...')
 # reduce the top PCs further using tSNE
 HSMM <- reduceDimension(HSMM,
-                        max_components = 2,
+                        max_components = 5,
                         norm_method = 'none',
                         pseudo_expr = 0,
                         num_dim = 4,
@@ -119,9 +119,9 @@ tic('Density peak clustering.....')
 # clusters on the 2-D t-SNE space
 HSMM <- clusterCells(HSMM,
                      verbose = F,
-                     cores = round(detectCores()*0.9),
-                     delta_threshold = 5,
-                     rho_threshold = 400)
+                     cores = round(detectCores()*0.9))
+                     #delta_threshold = 5,
+                     #rho_threshold = 400)
                      # method = "louvain",
                      # k = round(sqrt(dim(HSMM)[[2]])) ,
                      # louvain_iter = 3)
@@ -129,15 +129,14 @@ toc()
 # visualize
 pData(HSMM)$louvain <- as.factor(pData(HSMM)$louvain)
 pData(HSMM)$guide_cov <- as.factor(pData(HSMM)$guide_cov)
-pData(HSMM) <- pData(HSMM) %>%
-  mutate(wt = (pData(HSMM)$guide_cov == "0"))
+pData(HSMM)$wt <- as.factor(pData(HSMM)$guide_cov == "0")
 # facet plot all phenotypically encoded data types
 louv_plot <- plot_cell_clusters(HSMM, color_by = 'louvain')
 clust_plot <- plot_cell_clusters(HSMM, color_by = 'Cluster')
-guide_plot <- plot_cell_clusters(HSMM, color_by = 'guide_cov')
+#guide_plot <- plot_cell_clusters(HSMM, color_by = 'guide_cov')
 wt_plot <-  plot_cell_clusters(HSMM, color_by = 'wt')
 png(sprintf('%s/subclusters.png', out.dir), width = 20, height = 20, units = 'in', res = 200)
-gridExtra::grid.arrange(clust_plot, louv_plot, wt, guide_plot, ncol = 2, nrow = 2)
+gridExtra::grid.arrange(clust_plot, louv_plot, wt_plot, ncol = 3)
 dev.off()
 
 # visualize cell local density (P) vs.
@@ -161,7 +160,7 @@ dev.off()
 tic('DE gene test....')
 # perform DE gene test to extract distinguishing genes
 clustering_DEG_genes <- differentialGeneTest(HSMM,
-                                             fullModelFormulaStr = '~guide_cov',
+                                             fullModelFormulaStr = '~louvain',
                                              #reducedModelFormulaStr = '~louvain',
                                              cores = round(detectCores()*0.9))
 toc()
@@ -186,11 +185,11 @@ louv_plot <- plot_cell_trajectory(HSMM, color_by = "louvain")
 clust_plot <- plot_cell_trajectory(HSMM, color_by = "Cluster")
 state_plot <- plot_cell_trajectory(HSMM, color_by = "State")
 pseudo_plot <- plot_cell_trajectory(HSMM, color_by = "Pseudotime")
-guide_plot <- plot_cell_trajectory(HSMM, color_by = "guide_cov")
+#guide_plot <- plot_cell_trajectory(HSMM, color_by = "guide_cov")
 wt_plot <- plot_cell_trajectory(HSMM, color_by = "wt")
 png(sprintf('%s/trajectory.png', out.dir), width = 30, height = 20, units = 'in', res = 200)
 gridExtra::grid.arrange(louv_plot, clust_plot, state_plot,
-                        pseudo_plot, guide_plot, wt_plot,
+                        pseudo_plot, wt_plot,
                         ncol = 3, nrow = 2)
 dev.off()
 
