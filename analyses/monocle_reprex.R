@@ -21,6 +21,8 @@ start.date <- Sys.Date()
 out.dir <- sprintf("../out/%s_monocle-mat2-rprx", start.date)
 dir.create(out.dir)
 
+args <- commandArgs(trailingOnly = TRUE)
+
 print('Number of cores:')
 print(detectCores())
 
@@ -39,7 +41,7 @@ obs <- read_csv(path_cell_meta) # observations, or rows, including metadata
 vars <- h5read(file_loc, "/var") # variables, or columns
 
 # subset a sample to effectively
-clust_indices <- sample(1:nrow(obs), 10000)
+clust_indices <- sample(1:nrow(obs), as.numeric(args[1]))
 h5closeAll()
 data <- h5read(file_loc, "/X", index = list(NULL, clust_indices)) #normalized matrix
 obs_indices <- obs[clust_indices,]
