@@ -19,4 +19,4 @@ hostname
 qstat -j $JOB_ID
 
 echo $input
-Rscript monocle_reprex.R $input
+Rscript monocle_reprex.R 10000 $input
