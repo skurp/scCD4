@@ -32,29 +32,6 @@ count(enriched_guides, louvain)
 depleted_guides <- tidy_feats(tidy_guides, "depleted")
 count(depleted_guides, louvain)
 
-# as compared to all other clusters
-not_shared_feats <- function(hypergeom.analysis, feat) {
-  uq.feat <- list()
-  for( i in sort(unique(hypergeom.analysis[['louvain']]))) {
-    not.clust.feat <- hypergeom.analysis %>%
-      filter(louvain != i) %>%
-      select(feat) %>%
-      distinct()
-    clust.uq.feat <- hypergeom.analysis %>%
-      filter(louvain == i) %>%
-      select(feat) %>%
-      distinct() %>%
-      anti_join(not.clust.feat)
-    colnames(clust.uq.feat) <- sprintf('%i', i)
-    uq.feat <- append(uq.feat, clust.uq.feat)
-  }
-  # corece to dataframe
-  df <- lapply(uq.feat,`length<-`, max(lengths(uq.feat))) %>%
-    as.data.frame()
-  colnames(df) <- as.character(sort(unique(hypergeom.analysis[['louvain']])))
-  df
-}
-
 uq.en <- not_shared_feats(enriched_guides, "guide") %>%
   gather(key = "louvain", value = "guide") %>%
   na.omit() %>%
