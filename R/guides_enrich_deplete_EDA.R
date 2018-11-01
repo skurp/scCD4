@@ -55,5 +55,13 @@ not_shared_feats <- function(hypergeom.analysis, feat) {
   df
 }
 
-uq.en <- not_shared_feats(enriched_guides, "guide")
-uq.de <- not_shared_feats(depleted_guides, "guide")
+uq.en <- not_shared_feats(enriched_guides, "guide") %>%
+  gather(key = "louvain", value = "guide") %>%
+  na.omit() %>%
+  mutate(louvain = as.integer(louvain)) %>%
+  arrange(louvain)
+uq.de <- not_shared_feats(depleted_guides, "guide") %>%
+  gather(key = "louvain", value = "guide") %>%
+  na.omit() %>%
+  mutate(louvain = as.integer(louvain)) %>%
+  arrange(louvain)
