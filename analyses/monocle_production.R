@@ -39,16 +39,18 @@ obs <- read_csv(path_cell_meta) # observations, or rows, including metadata
 vars <- h5read(file_loc, "/var") # variables, or columns
 
 # subset a sample to effectively
-clust_indices <- sample(1:nrow(obs), 20000)
+#clust_indices <- sample(1:nrow(obs), 20000)
+clust_indices <- which(obs$louvain == 1)
+clust_indices <- sample(clust_indices, 10000)
 h5closeAll()
-data <- h5read(file_loc, "/X") #, index = list(NULL, clust_indices)) #normalized matrix
+data <- h5read(file_loc, "/X", index = list(NULL, clust_indices)) #normalized matrix
 obs_indices <- obs[clust_indices,]
 
 data <- data %>%
   t() %>%
   as.data.frame()
 colnames(data) <- c(vars$index)
-data <- cbind(obs, data) %>%
+data <- cbind(obs_indices, data) %>%
   mutate_if(is.array, as.vector)
 
 print("Dimensions of data:")
@@ -90,7 +92,7 @@ print(summary(fData(HSMM)$num_cells_expressed))
 
 # superset of genes expressed in at least 5% of all cells
 fData(HSMM)$use_for_ordering <-
-  fData(HSMM)$num_cells_expressed > 0.05 * ncol(HSMM)
+  fData(HSMM)$num_cells_expressed > 0.01 * ncol(HSMM)
 # percentage of retained genes
 print('Percentage of retained genes:')
 print(sum(fData(HSMM)$use_for_ordering) / length(fData(HSMM)$use_for_ordering))
@@ -105,10 +107,10 @@ dev.off()
 tic('Calc PCs and reduce via tSNE...')
 # reduce the top PCs further using tSNE
 HSMM <- reduceDimension(HSMM,
-                        max_components = 5,
+                        max_components = 6,
                         norm_method = 'none',
                         pseudo_expr = 0,
-                        num_dim = 4,
+                        #num_dim = 4,
                         reduction_method = 'tSNE',
                         cores = round(detectCores()*0.9),
                         verbose = T)
@@ -119,12 +121,12 @@ tic('Density peak clustering.....')
 # clusters on the 2-D t-SNE space
 HSMM <- clusterCells(HSMM,
                      verbose = F,
-                     cores = round(detectCores()*0.9))
+                     cores = round(detectCores()*0.9),
                      #delta_threshold = 5,
-                     #rho_threshold = 400)
-                     # method = "louvain",
-                     # k = round(sqrt(dim(HSMM)[[2]])) ,
-                     # louvain_iter = 3)
+                     #rho_threshold = 400,
+                     method = "louvain",
+                     k = round(sqrt(dim(HSMM)[[2]])) ,
+                     louvain_iter = 3)
 toc()
 # visualize
 pData(HSMM)$louvain <- as.factor(pData(HSMM)$louvain)
@@ -135,7 +137,7 @@ louv_plot <- plot_cell_clusters(HSMM, color_by = 'louvain')
 clust_plot <- plot_cell_clusters(HSMM, color_by = 'Cluster')
 #guide_plot <- plot_cell_clusters(HSMM, color_by = 'guide_cov')
 wt_plot <-  plot_cell_clusters(HSMM, color_by = 'wt')
-png(sprintf('%s/subclusters.png', out.dir), width = 20, height = 20, units = 'in', res = 200)
+png(sprintf('%s/subclusters.png', out.dir), width = 20, height = 10, units = 'in', res = 200)
 gridExtra::grid.arrange(clust_plot, louv_plot, wt_plot, ncol = 3)
 dev.off()
 
@@ -144,9 +146,9 @@ dev.off()
 # for cluster understanding
 # Can only employ this plot when using
 # Density Peak clustering
-png(sprintf('%s/rho_delta_thresholds.png', out.dir), width = 6, height = 6, units = 'in', res = 200)
-plot_rho_delta(HSMM)
-dev.off()
+# png(sprintf('%s/rho_delta_thresholds.png', out.dir), width = 6, height = 6, units = 'in', res = 200)
+# plot_rho_delta(HSMM)
+# dev.off()
 
 # HSMM <- clusterCells(HSMM,
 #                      rho_threshold = 23,
@@ -160,7 +162,7 @@ dev.off()
 tic('DE gene test....')
 # perform DE gene test to extract distinguishing genes
 clustering_DEG_genes <- differentialGeneTest(HSMM,
-                                             fullModelFormulaStr = '~louvain',
+                                             fullModelFormulaStr = '~State',
                                              #reducedModelFormulaStr = '~louvain',
                                              cores = round(detectCores()*0.9))
 toc()
