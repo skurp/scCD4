@@ -14,6 +14,7 @@ library(monocle)
 library(dplyr)
 library(tictoc)
 library(readr)
+devtools::load_all()
 
 
 # Prepare output paths ----------------------------------------------------
@@ -53,7 +54,7 @@ colnames(data) <- c(vars$index)
 data <- cbind(obs_indices, data) %>%
   mutate_if(is.array, as.vector) %>%
   mutate(guide_cov = str_extract(guide_cov, "^[:alnum:]+\\.[:digit:]+")) %>%
-  mutate(guide_cov = if_else(is.na(guide_cov), '0', guide))
+  mutate(guide_cov = if_else(is.na(guide_cov), '0', guide_cov))
 
 print("Dimensions of data:")
 print(dim(data))
@@ -146,9 +147,10 @@ pData(HSMM)$louvain <- as.factor(pData(HSMM)$louvain)
 pData(HSMM)$guide_cov <- as.factor(pData(HSMM)$guide_cov)
 pData(HSMM)$wt <- as.factor(pData(HSMM)$guide_cov == "0")
 # vectorize enriched guides in cluster 1 vs non
-pData(HSMM)<- pData(HSMM) %>%
-  mutate(en.gu.clust1  = ifelse(!(guide_cov %in% clust1_guide_data$guide), NA, guide)) %>%
-  mutate(en.gu.clust1 = as.factor(en.gu.clust1))
+pData(HSMM)$en.gu.clust1 <- replace(as.vector(pData(HSMM)$guide_cov),
+                                    !(as.vector(pData(HSMM)$guide_cov)%in% clust1_guide_data$guide),
+                                    NA)
+pData(HSMM)$en.gu.clust1 <- as.factor(pData(HSMM)$en.gu.clust1)
 # facet plot all phenotypically encoded data types
 louv_plot <- plot_cell_clusters(HSMM, color_by = 'louvain')
 clust_plot <- plot_cell_clusters(HSMM, color_by = 'Cluster')
