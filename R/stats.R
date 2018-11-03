@@ -48,6 +48,21 @@ hypergeom_test <- function(meta, q, m, K, n) {
   as_tibble(cbind(q, calc))
 }
 
+# function to clean matrix of newly calculated EN/DE guides
+tidy_feats <- function(tidy_guides, type) {
+  df_out <- data.frame(louvain = c(),
+                       guide = c())
+  for(cluster in tidy_guides){
+    feat_type <- cluster[[type]]
+    n_feat <- length(feat_type)
+    cluster_rep <- as.integer(rep(cluster[['cluster']], n_feat))
+    df_tmp <- data.frame(louvain = cluster_rep,
+                         guide = feat_type)
+    df_out <- rbind(df_out, df_tmp)
+  }
+  df_out
+}
+
 
 # Extract features unique to each cluster
 # as compared to all other clusters
