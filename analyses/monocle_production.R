@@ -41,7 +41,7 @@ vars <- h5read(file_loc, "/var") # variables, or columns
 # subset a sample to effectively
 #clust_indices <- sample(1:nrow(obs), 20000)
 clust_indices <- which(obs$louvain == 1)
-clust_indices <- sample(clust_indices, 10000)
+#clust_indices <- sample(clust_indices, 10000)
 h5closeAll()
 data <- h5read(file_loc, "/X", index = list(NULL, clust_indices)) #normalized matrix
 obs_indices <- obs[clust_indices,]
@@ -107,7 +107,7 @@ dev.off()
 tic('Calc PCs and reduce via tSNE...')
 # reduce the top PCs further using tSNE
 HSMM <- reduceDimension(HSMM,
-                        max_components = 6,
+                        max_components = 10,
                         norm_method = 'none',
                         pseudo_expr = 0,
                         #num_dim = 4,
@@ -115,6 +115,8 @@ HSMM <- reduceDimension(HSMM,
                         cores = round(detectCores()*0.9),
                         verbose = T)
 toc()
+# tmp save reduced model
+saveRDS(HSMM, sprintf("%s/analyzed_obj.RDS", out.dir))
 
 tic('Density peak clustering.....')
 # run density peak clustering to identify the
@@ -162,7 +164,7 @@ dev.off()
 tic('DE gene test....')
 # perform DE gene test to extract distinguishing genes
 clustering_DEG_genes <- differentialGeneTest(HSMM,
-                                             fullModelFormulaStr = '~State',
+                                             fullModelFormulaStr = '~Cluster',
                                              #reducedModelFormulaStr = '~louvain',
                                              cores = round(detectCores()*0.9))
 toc()
