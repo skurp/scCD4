@@ -42,7 +42,7 @@ vars <- h5read(file_loc, "/var") # variables, or columns
 # subset a sample to effectively
 #clust_indices <- sample(1:nrow(obs), 20000)
 clust_indices <- which(obs$louvain == 1)
-clust_indices <- sample(clust_indices, 25000)
+#clust_indices <- sample(clust_indices, 25000)
 h5closeAll()
 data <- h5read(file_loc, "/X", index = list(NULL, clust_indices)) #normalized matrix
 obs_indices <- obs[clust_indices,]
@@ -228,8 +228,9 @@ guide_data <- read_tsv(path_guide_data) %>%
   mutate(guide = str_extract(guide, "^[:alnum:]+\\.[:digit:]+")) %>%
   filter(guide %in% clust1_guide_data$guide)
 
-png(sprintf("%s/EN-gene-traj.png", out.dir), width = 10, height = 10, units = 'in', res = 200)
-plot_cell_trajectory(HSMM, color_by = "en.gu.clust1", markers = guide_data$gene)
+png(sprintf("%s/EN-gene-traj.png", out.dir), width = 15, height = 15, units = 'in', res = 200)
+plot_cell_trajectory(HSMM, color_by = "en.gu.clust1", markers = guide_data$gene, use_color_gradient = FALSE,
+                     markers_linear = TRUE)
 dev.off()
 
 # save object for futher use
