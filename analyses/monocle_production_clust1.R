@@ -14,12 +14,12 @@ library(monocle)
 library(dplyr)
 library(tictoc)
 library(readr)
+library(stringr)
 devtools::load_all()
-
 
 # Prepare output paths ----------------------------------------------------
 start.date <- Sys.Date()
-out.dir <- sprintf("../out/%s_monocle-mat2-cluster1", start.date)
+out.dir <- sprintf("../out/%s_monocle-mat2-clust1-rprx", start.date)
 dir.create(out.dir)
 
 print('Number of cores:')
@@ -42,7 +42,7 @@ vars <- h5read(file_loc, "/var") # variables, or columns
 # subset a sample to effectively
 #clust_indices <- sample(1:nrow(obs), 20000)
 clust_indices <- which(obs$louvain == 1)
-#clust_indices <- sample(clust_indices, 10000)
+clust_indices <- sample(clust_indices, 25000)
 h5closeAll()
 data <- h5read(file_loc, "/X", index = list(NULL, clust_indices)) #normalized matrix
 obs_indices <- obs[clust_indices,]
@@ -103,7 +103,7 @@ print(summary(fData(HSMM)$num_cells_expressed))
 
 # superset of genes expressed in at least 5% of all cells
 fData(HSMM)$use_for_ordering <-
-  fData(HSMM)$num_cells_expressed > 0.01 * ncol(HSMM)
+  fData(HSMM)$num_cells_expressed > 0.05 * ncol(HSMM)
 # percentage of retained genes
 print('Percentage of retained genes:')
 print(sum(fData(HSMM)$use_for_ordering) / length(fData(HSMM)$use_for_ordering))
@@ -118,7 +118,7 @@ dev.off()
 tic('Calc PCs and reduce via tSNE...')
 # reduce the top PCs further using tSNE
 HSMM <- reduceDimension(HSMM,
-                        max_components = 10,
+                        max_components = 6,
                         norm_method = 'none',
                         pseudo_expr = 0,
                         #num_dim = 4,
@@ -149,7 +149,7 @@ pData(HSMM)$wt <- as.factor(pData(HSMM)$guide_cov == "0")
 # vectorize enriched guides in cluster 1 vs non
 pData(HSMM)$en.gu.clust1 <- replace(as.vector(pData(HSMM)$guide_cov),
                                     !(as.vector(pData(HSMM)$guide_cov)%in% clust1_guide_data$guide),
-                                    NA)
+                                    "non-enriched_guides")
 pData(HSMM)$en.gu.clust1 <- as.factor(pData(HSMM)$en.gu.clust1)
 # facet plot all phenotypically encoded data types
 louv_plot <- plot_cell_clusters(HSMM, color_by = 'louvain')
@@ -157,7 +157,7 @@ clust_plot <- plot_cell_clusters(HSMM, color_by = 'Cluster')
 guide_plot <- plot_cell_clusters(HSMM, color_by = 'en.gu.clust1')
 wt_plot <-  plot_cell_clusters(HSMM, color_by = 'wt')
 png(sprintf('%s/subclusters.png', out.dir), width = 30, height = 10, units = 'in', res = 200)
-gridExtra::grid.arrange(clust_plot, louv_plot, wt_plot, en.gu.clust1, ncol = 4)
+gridExtra::grid.arrange(clust_plot, louv_plot, wt_plot, guide_plot, ncol = 4)
 dev.off()
 
 # visualize cell local density (P) vs.
@@ -186,8 +186,8 @@ pData(HSMM)$cluster_guide <- as.factor(paste0(pData(HSMM)$louvain, "-", pData(HS
 tic('DE gene test....')
 # perform DE gene test to extract distinguishing genes
 clustering_DEG_genes <- differentialGeneTest(HSMM,
-                                             fullModelFormulaStr = '~en.gu.clust1',
-                                             #reducedModelFormulaStr = '~louvain',
+                                             fullModelFormulaStr = '~en.gu.clust1 + louvain + guide_cov',
+                                             reducedModelFormulaStr = '~louvain + guide_cov',
                                              cores = round(detectCores()*0.9))
 toc()
 
@@ -217,6 +217,19 @@ png(sprintf('%s/trajectory.png', out.dir), width = 30, height = 20, units = 'in'
 gridExtra::grid.arrange(louv_plot, clust_plot, state_plot,
                         pseudo_plot, wt_plot, guide_plot,
                         ncol = 3, nrow = 3)
+dev.off()
+
+# get DE genes associated with each EN guide
+# sigpos guide-gene combos
+path_guide_data <- "/ye/yelabstore2/dosageTF/tfko_140/combined/nsnp20.raw.sng.guide_sng.norm.vs0.igtb.guide.de.seurate.txt.meta.guide.meta.sigpos.txt"
+guide_data <- read_tsv(path_guide_data) %>%
+  rename(guide = cluster) %>%
+  select(guide, gene, fdr) %>%
+  mutate(guide = str_extract(guide, "^[:alnum:]+\\.[:digit:]+")) %>%
+  filter(guide %in% clust1_guide_data$guide)
+
+png(sprintf("%s/EN-gene-traj.png", out.dir), width = 10, height = 10, units = 'in', res = 200)
+plot_cell_trajectory(HSMM, color_by = "en.gu.clust1", markers = guide_data$gene)
 dev.off()
 
 # save object for futher use
