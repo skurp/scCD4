@@ -47,7 +47,7 @@ guide_data <- read_tsv(path_guide_data) %>%
   mutate(guide = str_extract(guide, "^[:alnum:]+\\.[:digit:]+"))
 
 # uniquely enriched guides for cluster X and DE gene associations
-clust1_guide_data <- guide_data %>%
+clust1_gene_data <- guide_data %>%
   filter(guide %in% (filter(uq.en, louvain == 1)[['guide']]))
 # enriched guides for cluster X
 clust1_guide_data <- enriched_guides %>%
