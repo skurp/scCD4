@@ -18,7 +18,7 @@ dir.create("../out/logs")
 # Input data --------------------------------------------------------------
 HSMM <- readRDS('../data/sampled_monocle_obj.RDS')
 # all cluster-gene combos
-gene_loc_full <- "/ye/yelabstore2/dosageTF/tfko_140/combined/nsnp20.raw.sng.guide_sng.norm.igtb.louvain.de.seurate.meta.louvain.txt"
+gene_loc_full <- "/ye/yelabstore2/dosageTF/tfko_140/combined/nsnp20.raw.sng.guide_sng.norm.igtb.louvain.de.seurate.meta.louvain.sig.txt"
 gene_data_full <- read_tsv(gene_loc_full)
 
 # METHOD: Construct single cell trajectories ------------------------------
@@ -41,20 +41,14 @@ toc()
 
 # visualize
 pData(HSMM)$louvain <- as.factor(pData(HSMM)$louvain)
-pData(HSMM)$guide <- as.factor(pData(HSMM)$louvain)
-
-cells_to_be_tested <- pData(HSMM) %>%
-  filter(louvain == 8)
-genes_to_be_tested <- gene_data_full %>%
-  filter(cluster == 2)
-
-cds_subset <- HSMM[genes_to_be_tested$gene,]
+pData(HSMM)$guide_cov <- as.factor(pData(HSMM)$guide_cov)
+pData(HSMM)$cluster_guide <- as.factor(paste0(pData(HSMM)$louvain, "-", pData(HSMM)$guide_cov))
 
 tic('DE gene test....')
 # perform DE gene test to extract distinguishing genes
-clustering_DEG_genes <- differentialGeneTest(cds_subset,
-                                             fullModelFormulaStr = '~louvain',
-                                             cores = 4)
+clustering_DEG_genes <- differentialGeneTest(HSMM,
+                                             fullModelFormulaStr = '~cluster_guide',
+                                             cores = 8)
 toc()
 
 
@@ -72,76 +66,23 @@ toc()
 
 
 
+# import EN/DE guides
+guides <- read_tsv("/netapp/home/rgate/tfko_140/nsnp20.raw.sng.guide_sng.meta.guidecluster.enrichment.zsig.txt")
+tidy_guides <- apply(guides, 1, function(x) strsplit(x, split = ","))
+enriched_guides <- tidy_feats(tidy_guides, "enriched")
+# enriched guides for cluster X
+clust1_guide_data <- enriched_guides %>%
+  filter(louvain == 1)
 
-
-
-
-
-
-
-
-# all cell-guide - cluster
-path_cell_meta <- "~/ye/projects/scanpy/KO_cells.csv"
-cell_meta <- read_csv(path_cell_meta) %>% sample_frac(.1)
-
-# all guide-gene combos
-path_guide_data <- "/ye/yelabstore2/dosageTF/tfko_140/combined/nsnp20.raw.sng.guide_sng.norm.vs0.igtb.guide.de.seurate.txt.meta.guide.meta.txt"
+# get DE genes associated with each EN guide
+# sigpos guide-gene combos
+path_guide_data <- "/ye/yelabstore2/dosageTF/tfko_140/combined/nsnp20.raw.sng.guide_sng.norm.vs0.igtb.guide.de.seurate.txt.meta.guide.meta.sigpos.txt"
 guide_data <- read_tsv(path_guide_data) %>%
   rename(guide = cluster) %>%
-  select(guide, gene, fdr) %>% sample_frac(.1)
+  select(guide, gene, fdr) %>%
+  mutate(guide = str_extract(guide, "^[:alnum:]+\\.[:digit:]+")) %>%
+  filter(guide %in% clust1_guide_data$guide)
 
-# all cluster-gene combos
-gene_loc_full <- "/ye/yelabstore2/dosageTF/tfko_140/combined/nsnp20.raw.sng.guide_sng.norm.igtb.louvain.de.seurate.meta.louvain.txt"
-gene_data_full <- read_tsv(gene_loc_full) %>%
-  select(cluster, gene, fdr) %>% sample_frac(.1)
-
-clust8 <- cell_meta %>%
-  select(index, guide_cov, louvain) %>%
-  rename(guide = guide_cov) %>%
-  inner_join(guide_data) %>%
-  filter(louvain == 8) %>%
-  filter(guide == "TCF25.89900721.AGCTCTGCTCACACTCAGGG_guide")
-
-foo <- readRDS("../data/data_subset_clust_10_11.rds")
-clust10 <- foo %>%
-  filter(louvain == 10) %>%
-  filter(guide_cov == 0)
-all <- foo %>%
-  filter(guide_cov == 0)
-
-
-all <- cell_meta %>%
-  select(index, guide_cov, louvain) %>%
-  rename(guide = guide_cov) %>%
-  inner_join(guide_data) %>%
-  #filter(louvain == 8) %>%
-  filter(guide == "TCF25.89900721.AGCTCTGCTCACACTCAGGG_guide")
-
-length(unique(all$gene))
-
-
-
-clustA.guideB <- foo %>%
-  filter(louvain == 10 & guide_cov == 4)
-clustA.WT <- foo %>%
-  filter(louvain == 10 & guide_cov == 0)
-
-
-
-
-
-melt.final <- gene_data_full %>%
-  melt(measure.vars = c("p_val1"),
-       id.vars = c("cluster"))
-
-# enriched test
-ggplot(melt.final) +
-  geom_histogram(aes(x =  value), bins = 100) +
-  facet_wrap(vars(cluster), nrow = 9, scales = "free") +
-  ggsave(sprintf("%s/fdr-distrib.png", out.dir), width = 15, height = 30, units = 'in')
-
-
-ggplot(gene_data_full) +
-  geom_histogram(aes(x =  pvalue), bins = 100) +
-  #facet_wrap(vars(cluster), nrow = 9, scales = "free") +
-  ggsave(sprintf("%s/pval-TEST.png", out.dir), width = 15, height = 30, units = 'in')
+png(sprintf("%s/test-traj.png", out.dir), width = 8, height = 8, units = 'in', res = 200)
+plot_cell_trajectory(HSMM, color_by = "en.gu.clust1", markers = guide_data$gene)
+dev.off()
