@@ -30,16 +30,16 @@ obs <- read_csv(path_cell_meta) # observations, or rows, including metadata
 vars <- h5read(file_loc, "/var") # variables, or columns
 
 # subset a sample to effectively
-clust_indices <- sample(1:nrow(obs), 20000)
+#clust_indices <- sample(1:nrow(obs), 20000)
 h5closeAll()
 data <- h5read(file_loc, "/X", index = list(NULL, clust_indices)) #normalized matrix
-obs_indices <- obs[clust_indices,]
+#obs_indices <- obs[clust_indices,]
 
 data <- data %>%
   t() %>%
   as.data.frame()
 colnames(data) <- c(vars$index)
-data <- cbind(obs_indices, data) %>%
+data <- cbind(obs, data) %>%
   mutate_if(is.array, as.vector)
 
 print("Dimensions of data:")
@@ -65,11 +65,25 @@ HSMM <- newCellDataSet(as(expr_matrix, 'sparseMatrix'),
                        featureData = fd,
                        lowerDetectionLimit = 0.5,
                        expressionFamily = inv.gaussianff()) # must check this inv.gaussian()
+toc()
 
+tic('Gene abnd cell filtering.....')
+# use low level of expresison detection - these genes
+# account for DE genes already so want to keep them all
+# skip cell filtering in general...already preprocessed
+HSMM <- detectGenes(HSMM, min_expr = 0.0001)
+print('Number cells expressing retained genes summary:')
+print(summary(fData(HSMM)$num_cells_expressed))
+
+# superset of genes expressed in at least 5% of all cells
+fData(HSMM)$use_for_ordering <-
+  fData(HSMM)$num_cells_expressed > 0.05 * ncol(HSMM)
+# percentage of retained genes
+print('Percentage of retained genes:')
+print(sum(fData(HSMM)$use_for_ordering) / length(fData(HSMM)$use_for_ordering))
 toc()
 
 
-
-saveRDS(HSMM, "../data/sampled_monocle_obj.RDS")
+saveRDS(HSMM, "../data/full_monocle_obj.RDS")
 
 print('DONE')
