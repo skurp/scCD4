@@ -32,7 +32,7 @@ vars <- h5read(file_loc, "/var") # variables, or columns
 # subset a sample to effectively
 #clust_indices <- sample(1:nrow(obs), 20000)
 h5closeAll()
-data <- h5read(file_loc, "/X", index = list(NULL, clust_indices)) #normalized matrix
+data <- h5read(file_loc, "/X") #, index = list(NULL, clust_indices)) #normalized matrix
 #obs_indices <- obs[clust_indices,]
 
 data <- data %>%
