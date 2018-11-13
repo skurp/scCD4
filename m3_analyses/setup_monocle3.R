@@ -14,6 +14,8 @@ conda_create("monocle3")
 use_condaenv("monocle3")
 conda_install("monocle3", "umap-learn")
 conda_install("monocle3", "louvain")
+
+# fails on install "configure: error: X11 not found but required, configure aborted."
 devtools::install_github("cole-trapnell-lab/monocle-release", ref="monocle3_alpha",
                          force = TRUE)
 # test
