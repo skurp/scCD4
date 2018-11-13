@@ -108,5 +108,6 @@ priority_feature_reorder <- function(cds, pheno_feature, priority_vector, not_pr
   cds_reorder <- reducedDimS(cds)
   cds_reorder <- cds_reorder[,pheno$rownames]
   cds@reducedDimS <- cds_reorder
+  print("The reordered features to 'color_by' are in pData(cds)$priority_reorder")
   return(cds)
 }
