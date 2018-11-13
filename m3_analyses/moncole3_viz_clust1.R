@@ -59,31 +59,16 @@ gridExtra::grid.arrange(louv_plot, state_plot, #clust_plot,
 dev.off()
 
 
+# one off plot
+test <- pData(HSMM) %>%
+  count(donor_cov, guide_cov) %>%
+  arrange(desc(n))
 
-# Plot enriched guides ----------------------------------------------------
-pData(HSMM)$en.gu.clust1 <- replace(as.vector(pData(HSMM)$guide_cov),
-                                    !(as.vector(pData(HSMM)$guide_cov)%in% clust1_guide_data$guide),
-                                    "non-enriched-guides")
-pData(HSMM)$en.gu.clust1 <- factor(pData(HSMM)$en.gu.clust1,
-                                   levels = c("non-enriched-guides", as.character(clust1_guide_data$guide)))
-
-# rearrange "under" points first, "over" points last
-pheno <- pData(HSMM)
-pheno$rownames <- rownames(pData(HSMM))
-pheno <- arrange(pheno, en.gu.clust1)
-# pheno$alpha <-  ifelse(pheno$en.gu.clust1 == "non-top-guides", 1, 2)
-pData(HSMM) <- pheno
-rownames(pData(HSMM)) <- pheno$rownames
-
-# rearrange columns in reducedDim
-# to match pData upon merging
-cds_reorder <- reducedDimS(HSMM)
-cds_reorder <- cds_reorder[,pheno$rownames]
-HSMM@reducedDimS <- cds_reorder
-
+foo <- priority_feature_reorder(cds = HSMM, pheno_feature = "donor_cov", priority_vector = test$donor_cov[1])
 
 png(sprintf('%s/trajectory.png', out.dir), width = 8, height = 8, units = 'in', res = 200)
-plot_cell_trajectory(HSMM, color_by = "en.gu.clust1")
+plot_cell_trajectory(foo, color_by = "priority_reorder")
 dev.off()
+
 
 
