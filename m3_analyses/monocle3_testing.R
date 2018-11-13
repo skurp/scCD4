@@ -7,11 +7,11 @@
 library(monocle)
 library(readr)
 library(reticulate)
-use_condenv("monocle3")
+use_condaenv("monocle3")
 
 # Import ------------------------------------------------------------------
 cds <- readRDS("../data/sampled_monocle_obj.RDS")
-cds <- updateCDS(HSMM)
+cds <- updateCDS(cds)
 pData(cds)$louvain <- as.factor(pData(cds)$louvain)
 pData(cds)$wt <- as.factor(pData(cds)$guide_cov == "0")
 
@@ -19,11 +19,13 @@ pData(cds)$wt <- as.factor(pData(cds)$guide_cov == "0")
 # Process Data ------------------------------------------
 # Pass TRUE if you want to see progress output on some of Monocle 3's operations
 DelayedArray:::set_verbose_block_processing(TRUE)
+options(DelayedArray.block.size=1000e6)
 cds <- estimateSizeFactors(cds)
 cds <- estimateDispersions(cds)
 
 # project data onto top PCs
-cds <- preprocessCDS(cds, num_dim = 20)
+cds <- preprocessCDS(cds, num_dim = 20, norm_method = 'none', pseudo_expr = 0,
+                     relative_expr = FALSE, scaling = FALSE, verbose = TRUE)
 # reduce dimensionality
 cds <- reduceDimension(cds, reduction_method = 'UMAP')
 # partition cells
@@ -47,6 +49,11 @@ get_correct_root_state <- function(cds, cell_phenotype, root_type){
 
   root_pr_nodes
 }
-node_ids <- get_correct_root_state(cds, cell_phenotype = "louvain", "0")
+node_ids <- get_correct_root_state(cds, cell_phenotype = "louvain", root_type = "0")
 cds <- orderCells(cds, root_pr_nodes = node_ids)
-plot_cell_trajectory(cds)
+plot_cell_trajectory(cds, color_by = "Pseudotime")
+
+# identfy genes that vary in expression over a trajectory
+pr_graph_test <- principalGraphTest(cds, k=3, cores=1)
+dplyr::add_rownames(pr_graph_test) %>%
+  dplyr::arrange(plyr::desc(morans_test_statistic), plyr::desc(-qval)) %>% head(3)
