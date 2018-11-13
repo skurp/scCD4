@@ -19,7 +19,7 @@ devtools::load_all()
 
 # Prepare output paths ----------------------------------------------------
 start.date <- Sys.Date()
-out.dir <- sprintf("../out/%s_monocle-mat2-clust1-rprx", start.date)
+out.dir <- sprintf("../out/%s_monocle-mat2-clust1-20k", start.date)
 dir.create(out.dir)
 
 # print('Number of cores:')
@@ -139,7 +139,8 @@ guide_data <- read_tsv(path_guide_data) %>%
 # # tmp save reduced model
 # saveRDS(HSMM, sprintf("%s/analyzed_obj.RDS", out.dir))
 
-HSMM <- readRDS("../out/2018-11-05_monocle-mat2-clust1-REDUCED/analyzed_obj.RDS")
+HSMM <- readRDS("../data/full_monocle_obj.RDS")
+print(unique(pData(HSMM)$louvain))
 # tic('Louvain sub-clustering.....')
 # # run density peak clustering to identify the
 # # clusters on the 2-D t-SNE space
@@ -157,11 +158,6 @@ HSMM <- readRDS("../out/2018-11-05_monocle-mat2-clust1-REDUCED/analyzed_obj.RDS"
 pData(HSMM)$louvain <- as.factor(pData(HSMM)$louvain)
 pData(HSMM)$guide_cov <- as.factor(pData(HSMM)$guide_cov)
 pData(HSMM)$wt <- as.factor(pData(HSMM)$guide_cov == "0")
-# vectorize enriched guides in cluster 1 vs non
-pData(HSMM)$en.gu.clust1 <- replace(as.vector(pData(HSMM)$guide_cov),
-                                    !(as.vector(pData(HSMM)$guide_cov)%in% clust1_guide_data$guide),
-                                    "non-enriched-guides")
-pData(HSMM)$en.gu.clust1 <- as.factor(pData(HSMM)$en.gu.clust1)
 # # facet plot all phenotypically encoded data types
 # louv_plot <- plot_cell_clusters(HSMM, color_by = 'louvain')
 # clust_plot <- plot_cell_clusters(HSMM, color_by = 'Cluster')
@@ -198,7 +194,7 @@ tic('DE gene test....')
 marker_genes <- row.names(subset(fData(HSMM),
                                  gene_short_name %in% guide_data$gene))
 # desperation to get this to work
-HSMM <- HSMM[marker_genes, sample(1:dim(HSMM)[2], 5000)]
+HSMM <- HSMM[marker_genes, sample(1:dim(HSMM)[2], 20000)]
 # perform DE gene test to extract distinguishing genes
 clustering_DEG_genes <- differentialGeneTest(HSMM[marker_genes,],
                                              fullModelFormulaStr = "~guide_cov",
@@ -221,23 +217,26 @@ tic('Order cells according to learned trajectory of pseudotime.....')
 HSMM <- orderCells(HSMM)
 toc()
 
+# reorder for plotting
+HSMM <- priority_feature_reorder(cds = HSMM, pheno_feature = "guide_cov",
+                                 priority_vector = clust1_guide_data$guide)
 # visualize
-louv_plot <- plot_cell_trajectory(HSMM, color_by = "louvain")
+#louv_plot <- plot_cell_trajectory(HSMM, color_by = "louvain")
 #clust_plot <- plot_cell_trajectory(HSMM, color_by = "Cluster")
 state_plot <- plot_cell_trajectory(HSMM, color_by = "State")
 pseudo_plot <- plot_cell_trajectory(HSMM, color_by = "Pseudotime")
-guide_plot <- plot_cell_trajectory(HSMM, color_by = "en.gu.clust1")
+guide_plot <- plot_cell_trajectory(HSMM, color_by = "priority_reorder")
 wt_plot <- plot_cell_trajectory(HSMM, color_by = "wt")
 png(sprintf('%s/trajectory.png', out.dir), width = 30, height = 20, units = 'in', res = 200)
-gridExtra::grid.arrange(louv_plot, state_plot, #clust_plot,
+gridExtra::grid.arrange(state_plot, #clust_plot, louv_plot,
                         pseudo_plot, wt_plot, guide_plot,
-                        ncol = 3, nrow = 2)
+                        ncol = 2, nrow = 2)
 dev.off()
 
 # DE genes associated with EN guides
 png(sprintf("%s/EN-gene-traj.png", out.dir), width = 15, height = 15, units = 'in', res = 200)
-plot_cell_trajectory(HSMM, color_by = "en.gu.clust1", markers = guide_data$gene, use_color_gradient = FALSE,
-                     markers_linear = TRUE)
+plot_cell_trajectory(HSMM, color_by = "priority_reorder", markers = guide_data$gene,
+                     use_color_gradient = TRUE, markers_linear = FALSE)
 dev.off()
 
 # save object for futher use

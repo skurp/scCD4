@@ -9,7 +9,7 @@
 #$ -l mem_free=64G                  #-- submits on nodes with enough free memory (required)
 #$ -l arch=linux-x64               #-- SGE resources (CPU type)
 #$ -l netapp=25G,scratch=1G         #-- SGE resources (home and scratch disks)
-#$ -l h_rt=4:58:00                #-- runtime limit (see above; this requests 24 hours)
+#$ -l h_rt=5:58:00                #-- runtime limit (see above; this requests 24 hours)
 #$ -M wconnell93@gmail.com
 #$ -m bea
 
