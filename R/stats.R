@@ -63,7 +63,6 @@ tidy_feats <- function(tidy_guides, type) {
   df_out
 }
 
-
 # Extract features unique to each cluster
 # as compared to all other clusters
 not_shared_feats <- function(hypergeom.analysis, feat) {
@@ -91,3 +90,23 @@ not_shared_feats <- function(hypergeom.analysis, feat) {
 
 # Visualizations ----------------------------------------------------------
 
+# plot_cell_trajectory cell ordering setup
+priority_feature_reorder <- function(cds, pheno_feature, priority_vector, not_priority = "other") {
+  # select features for reordering
+  pData(cds)[["priority_reorder"]] <- replace(as.vector(pData(HSMM)[[pheno_feature]]),
+                                  !(as.vector(pData(HSMM)[[pheno_feature]]) %in% as.character(priority_vector)),
+                                  not_priority)
+  pData(cds)[["priority_reorder"]] <- factor(pData(cds)[["priority_reorder"]],
+                                     levels = c(not_priority, as.character(priority_vector)))
+  # rearrange "under" points first, "over" points last
+  pheno <- pData(cds)
+  pheno$rownames <- rownames(pData(cds))
+  pheno <- arrange(pheno, priority_reorder)
+  pData(cds) <- pheno
+  rownames(pData(cds)) <- pheno$rownames
+  # rearrange columns in reducedDimS to match pData upon merging
+  cds_reorder <- reducedDimS(cds)
+  cds_reorder <- cds_reorder[,pheno$rownames]
+  cds@reducedDimS <- cds_reorder
+  return(cds)
+}
