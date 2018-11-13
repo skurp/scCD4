@@ -15,7 +15,7 @@ use_condaenv("monocle3")
 conda_install("monocle3", "umap-learn")
 conda_install("monocle3", "louvain")
 devtools::install_github("cole-trapnell-lab/monocle-release", ref="monocle3_alpha",
-                         dependencies = F)
+                         force = TRUE)
 # test
 library(monocle)
 
