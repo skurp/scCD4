@@ -31,12 +31,19 @@ pData(HSMM)$top.gu.clust1 <- replace(as.vector(pData(HSMM)$guide_cov),
 pData(HSMM)$top.gu.clust1 <- factor(pData(HSMM)$top.gu.clust1,
                                      levels = c("non-top-guides", top_guides$guide_cov[2:4]))
 
+# rearrange "under" points first, "over" points last
 pheno <- pData(HSMM)
 pheno$rownames <- rownames(pData(HSMM))
 pheno <- arrange(pheno, top.gu.clust1)
-pheno$alpha <-  ifelse(pheno$top.gu.clust1 == "non-top-guides", 0.1, 1)
+# pheno$alpha <-  ifelse(pheno$top.gu.clust1 == "non-top-guides", 1, 2)
 pData(HSMM) <- pheno
 rownames(pData(HSMM)) <- pheno$rownames
+
+# rearrange columns in reducedDim
+# to match pData upon merging
+cds_reorder <- reducedDimS(HSMM)
+cds_reorder <- cds_reorder[,pheno$rownames]
+HSMM@reducedDimS <- cds_reorder
 
 # visualize
 louv_plot <- plot_cell_trajectory(HSMM, color_by = "louvain")
@@ -59,3 +66,16 @@ p
 dev.off()
 
 
+
+foo <- data.frame(x = rnorm(2000),
+                  y = rnorm(2000),
+                  color = factor(c(rep(2, 100), rep(1, 1900))))
+ggplot(foo) +
+  geom_point(aes(x = x, y = y, color = color))
+bar <- foo %>%
+  arrange(color)
+ggplot(bar) +
+  geom_point(aes(x = x, y = y, color = color))
+
+ggplot(bar) +
+  geom_point(aes_string(x = "x", y = "y", color = "color"))
